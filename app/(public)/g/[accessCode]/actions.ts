@@ -1,6 +1,12 @@
 "use server";
 
 import { dataRepository } from "@/lib/data";
+import {
+  getQuizQuestionsForGame,
+  validateQuizSubmission,
+  type QuizQuestionView,
+  type SubmittedQuizAnswer,
+} from "@/lib/data/services/quizService";
 
 export type RegisterPlayerInput = {
   accessCode: string;
@@ -11,12 +17,26 @@ export type RegisterPlayerInput = {
 };
 
 export type RegisterPlayerResult =
-  | { success: true; playerId: string }
+  | {
+      success: true;
+      playerId: string;
+      quizQuestions: QuizQuestionView[];
+    }
   | {
       success: false;
       errorCode: "VALIDATION_ERROR" | "EMAIL_ALREADY_PLAYED" | "GAME_UNAVAILABLE";
       message: string;
     };
+
+export type SubmitQuizAnswersInput = {
+  accessCode: string;
+  playerId: string;
+  answers: SubmittedQuizAnswer[];
+};
+
+export type SubmitQuizAnswersResult =
+  | { success: true }
+  | { success: false; reset: true };
 
 export type SpinInput = {
   accessCode: string;
@@ -74,9 +94,45 @@ export async function registerPlayer(
     lastName,
     email,
     result: null,
+    quizPassed: false,
+    quizAttempts: 0,
   });
 
-  return { success: true, playerId: player.id };
+  const quizQuestions = await getQuizQuestionsForGame(dataRepository, game.id);
+
+  return {
+    success: true,
+    playerId: player.id,
+    quizQuestions,
+  };
+}
+
+export async function submitQuizAnswers(
+  input: SubmitQuizAnswersInput,
+): Promise<SubmitQuizAnswersResult> {
+  const game = await dataRepository.games.getByAccessCode(input.accessCode);
+  if (!game || !game.isActive) {
+    return { success: false, reset: true };
+  }
+
+  const players = await dataRepository.players.listByGameId(game.id);
+  const player = players.find((item) => item.id === input.playerId);
+  if (!player) {
+    return { success: false, reset: true };
+  }
+
+  const validation = await validateQuizSubmission(
+    dataRepository,
+    game.id,
+    input.answers,
+  );
+  if (!validation.allCorrect) {
+    await dataRepository.players.updateQuizStatus(player.id, false);
+    return { success: false, reset: true };
+  }
+
+  await dataRepository.players.updateQuizStatus(player.id, true);
+  return { success: true };
 }
 
 export async function spin(input: SpinInput): Promise<SpinResult> {

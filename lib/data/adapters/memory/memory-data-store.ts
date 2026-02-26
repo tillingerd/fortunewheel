@@ -20,6 +20,22 @@ type MemoryStore = {
   playerIdByEmailByGameId: Map<string, Map<string, string>>;
 };
 
+type SeededQuizQuestion = {
+  id: string;
+  question: string;
+  answers: Array<{
+    id: string;
+    text: string;
+    correct: boolean;
+  }>;
+};
+
+type SeededGame = {
+  game: Game;
+  quizQuestions: SeededQuizQuestion[];
+  prizes: Prize[];
+};
+
 const memoryStore: MemoryStore = {
   games: new Map<string, Game>(),
   gameIdsByAccessCode: new Map<string, string>(),
@@ -34,6 +50,66 @@ const memoryStore: MemoryStore = {
 };
 
 let seeded = false;
+
+const SEEDED_GAMES: SeededGame[] = [
+  {
+    game: {
+      id: "game_test01",
+      name: "Seed Game TEST01",
+      accessCode: "TEST01",
+      isActive: true,
+      noWinChance: 40,
+      createdAt: new Date().toISOString(),
+    },
+    quizQuestions: [
+      {
+        id: "q1",
+        question: "Which planet is known as the Red Planet?",
+        answers: [
+          { id: "a1_1", text: "Venus", correct: false },
+          { id: "a1_2", text: "Mars", correct: true },
+          { id: "a1_3", text: "Jupiter", correct: false },
+        ],
+      },
+      {
+        id: "q2",
+        question: "What does HTML stand for?",
+        answers: [
+          { id: "a2_1", text: "HyperText Markup Language", correct: true },
+          { id: "a2_2", text: "HighText Machine Language", correct: false },
+          { id: "a2_3", text: "Home Tool Markup Language", correct: false },
+        ],
+      },
+      {
+        id: "q3",
+        question: "How many days are there in a leap year?",
+        answers: [
+          { id: "a3_1", text: "365", correct: false },
+          { id: "a3_2", text: "366", correct: true },
+          { id: "a3_3", text: "364", correct: false },
+        ],
+      },
+    ],
+    prizes: [
+      {
+        id: "prize_1",
+        gameId: "game_test01",
+        name: "Gift Card",
+        imageUrl: "/prizes/gift-card.png",
+        stock: 5,
+        wonCount: 0,
+      },
+      {
+        id: "prize_2",
+        gameId: "game_test01",
+        name: "Coffee Mug",
+        imageUrl: "/prizes/coffee-mug.png",
+        stock: 4,
+        wonCount: 0,
+      },
+    ],
+  },
+];
 
 function createId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -57,68 +133,34 @@ function seedMemoryStore(): void {
   }
 
   // TODO: remove hardcoded seed data after Firebase + Admin CRUD are implemented.
-  const gameId = "game_test01";
-  const game: Game = {
-    id: gameId,
-    name: "Seed Game TEST01",
-    accessCode: "TEST01",
-    isActive: true,
-    noWinChance: 40,
-    createdAt: new Date().toISOString(),
-  };
+  for (const seededGame of SEEDED_GAMES) {
+    memoryStore.games.set(seededGame.game.id, seededGame.game);
+    memoryStore.gameIdsByAccessCode.set(seededGame.game.accessCode, seededGame.game.id);
 
-  memoryStore.games.set(game.id, game);
-  memoryStore.gameIdsByAccessCode.set(game.accessCode, game.id);
+    seededGame.quizQuestions.forEach((quizQuestion, index) => {
+      const question: QuizQuestion = {
+        id: quizQuestion.id,
+        gameId: seededGame.game.id,
+        text: quizQuestion.question,
+        order: index + 1,
+      };
+      memoryStore.questions.set(question.id, question);
+      pushUnique(memoryStore.questionIdsByGameId, seededGame.game.id, question.id);
+      memoryStore.answersByQuestionId.set(
+        question.id,
+        quizQuestion.answers.map((answer) => ({
+          id: answer.id,
+          questionId: question.id,
+          text: answer.text,
+          isCorrect: answer.correct,
+        })),
+      );
+    });
 
-  const questions: QuizQuestion[] = [
-    { id: "q1", gameId, text: "Which planet is known as the Red Planet?", order: 1 },
-    { id: "q2", gameId, text: "What does HTML stand for?", order: 2 },
-    { id: "q3", gameId, text: "How many days are there in a leap year?", order: 3 },
-  ];
-
-  for (const question of questions) {
-    memoryStore.questions.set(question.id, question);
-    pushUnique(memoryStore.questionIdsByGameId, gameId, question.id);
-  }
-
-  memoryStore.answersByQuestionId.set("q1", [
-    { id: "a1_1", questionId: "q1", text: "Venus", isCorrect: false },
-    { id: "a1_2", questionId: "q1", text: "Mars", isCorrect: true },
-    { id: "a1_3", questionId: "q1", text: "Jupiter", isCorrect: false },
-  ]);
-  memoryStore.answersByQuestionId.set("q2", [
-    { id: "a2_1", questionId: "q2", text: "HyperText Markup Language", isCorrect: true },
-    { id: "a2_2", questionId: "q2", text: "HighText Machine Language", isCorrect: false },
-    { id: "a2_3", questionId: "q2", text: "Home Tool Markup Language", isCorrect: false },
-  ]);
-  memoryStore.answersByQuestionId.set("q3", [
-    { id: "a3_1", questionId: "q3", text: "365", isCorrect: false },
-    { id: "a3_2", questionId: "q3", text: "366", isCorrect: true },
-    { id: "a3_3", questionId: "q3", text: "364", isCorrect: false },
-  ]);
-
-  const prizes: Prize[] = [
-    {
-      id: "prize_1",
-      gameId,
-      name: "Gift Card",
-      imageUrl: "/prizes/gift-card.png",
-      stock: 5,
-      wonCount: 0,
-    },
-    {
-      id: "prize_2",
-      gameId,
-      name: "Coffee Mug",
-      imageUrl: "/prizes/coffee-mug.png",
-      stock: 4,
-      wonCount: 0,
-    },
-  ];
-
-  for (const prize of prizes) {
-    memoryStore.prizes.set(prize.id, prize);
-    pushUnique(memoryStore.prizeIdsByGameId, gameId, prize.id);
+    for (const prize of seededGame.prizes) {
+      memoryStore.prizes.set(prize.id, prize);
+      pushUnique(memoryStore.prizeIdsByGameId, seededGame.game.id, prize.id);
+    }
   }
 
   seeded = true;
@@ -347,6 +389,21 @@ class MemoryPlayerRepository implements PlayerRepository {
     const updatedPlayer: Player = {
       ...existing,
       result: prizeId,
+    };
+    memoryStore.players.set(playerId, updatedPlayer);
+    return clone(updatedPlayer);
+  }
+
+  async updateQuizStatus(playerId: string, quizPassed: boolean): Promise<Player | null> {
+    const existing = memoryStore.players.get(playerId);
+    if (!existing) {
+      return null;
+    }
+
+    const updatedPlayer: Player = {
+      ...existing,
+      quizPassed,
+      quizAttempts: existing.quizAttempts + 1,
     };
     memoryStore.players.set(playerId, updatedPlayer);
     return clone(updatedPlayer);

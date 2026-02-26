@@ -29,6 +29,7 @@ export interface PlayerRepository {
   getByEmail(gameId: string, email: string): Promise<Player | null>;
   create(input: Omit<Player, "id" | "playedAt">): Promise<Player>;
   setResult(playerId: string, prizeId: string | null): Promise<Player | null>;
+  updateQuizStatus(playerId: string, quizPassed: boolean): Promise<Player | null>;
 }
 
 export interface DataRepository {

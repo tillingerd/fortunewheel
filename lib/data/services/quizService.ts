@@ -3,13 +3,15 @@ import type { DataRepository } from "@/lib/data/repositories";
 export type QuizQuestionView = {
   id: string;
   prompt: string;
-  options: string[];
+  options: Array<{
+    id: string;
+    text: string;
+  }>;
 };
 
-export type ValidateQuizAnswerInput = {
-  gameId: string;
+export type SubmittedQuizAnswer = {
   questionId: string;
-  selectedIndex: number;
+  answerId: string;
 };
 
 export async function getQuizQuestionsForGame(
@@ -25,28 +27,37 @@ export async function getQuizQuestionsForGame(
       return {
         id: question.id,
         prompt: question.text,
-        options: answers.map((answer) => answer.text),
+        options: answers.map((answer) => ({
+          id: answer.id,
+          text: answer.text,
+        })),
       };
     }),
   );
 }
 
-export async function validateQuizAnswer(
+export async function validateQuizSubmission(
   repository: DataRepository,
-  input: ValidateQuizAnswerInput,
-): Promise<{ isCorrect: boolean }> {
-  const question = (await repository.quiz.listQuestionsByGameId(input.gameId)).find(
-    (item) => item.id === input.questionId,
-  );
-  if (!question) {
-    return { isCorrect: false };
+  gameId: string,
+  submittedAnswers: SubmittedQuizAnswer[],
+): Promise<{ allCorrect: boolean }> {
+  const questions = await repository.quiz.listQuestionsByGameId(gameId);
+  if (questions.length === 0) {
+    return { allCorrect: false };
   }
 
-  const answers = await repository.quiz.listAnswersByQuestionId(input.questionId);
-  const selectedAnswer = answers[input.selectedIndex];
-  if (!selectedAnswer) {
-    return { isCorrect: false };
+  for (const question of questions) {
+    const selected = submittedAnswers.find((answer) => answer.questionId === question.id);
+    if (!selected) {
+      return { allCorrect: false };
+    }
+
+    const answers = await repository.quiz.listAnswersByQuestionId(question.id);
+    const selectedAnswer = answers.find((answer) => answer.id === selected.answerId);
+    if (!selectedAnswer || !selectedAnswer.isCorrect) {
+      return { allCorrect: false };
+    }
   }
 
-  return { isCorrect: selectedAnswer.isCorrect };
+  return { allCorrect: true };
 }

@@ -3,7 +3,10 @@
 export type QuizQuestionView = {
   id: string;
   prompt: string;
-  options: string[];
+  options: Array<{
+    id: string;
+    text: string;
+  }>;
 };
 
 type QuizProps = {
@@ -11,7 +14,7 @@ type QuizProps = {
   questionIndex: number;
   totalQuestions: number;
   feedback: string;
-  onAnswer: (selectedIndex: number) => void;
+  onAnswer: (answerId: string) => void | Promise<void>;
 };
 
 export function Quiz({
@@ -29,14 +32,14 @@ export function Quiz({
       </p>
       <p className="mb-3">{question.prompt}</p>
       <div className="flex flex-col gap-2">
-        {question.options.map((option, optionIndex) => (
+        {question.options.map((option) => (
           <button
-            key={option}
+            key={option.id}
             className="w-fit rounded border px-4 py-2 text-left"
             type="button"
-            onClick={() => onAnswer(optionIndex)}
+            onClick={() => onAnswer(option.id)}
           >
-            {option}
+            {option.text}
           </button>
         ))}
       </div>

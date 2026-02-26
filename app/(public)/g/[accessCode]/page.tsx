@@ -9,10 +9,16 @@ import {
 } from "@/components/game/RegistrationForm";
 import { Quiz } from "@/components/game/Quiz";
 import { SpinPanel } from "@/components/game/SpinPanel";
-import { registerPlayer, spin } from "@/app/(public)/g/[accessCode]/actions";
-import { MOCK_QUIZ_QUESTIONS } from "@/lib/mock/quiz";
+import {
+  registerPlayer,
+  spin,
+  submitQuizAnswers,
+  type RegisterPlayerResult,
+} from "@/app/(public)/g/[accessCode]/actions";
+import type { SubmittedQuizAnswer } from "@/lib/data/services/quizService";
 
 type GameStep = "registration" | "quiz" | "quizComplete" | "spin";
+type RegisteredQuestion = Extract<RegisterPlayerResult, { success: true }>["quizQuestions"][number];
 
 export default function PublicGamePage() {
   const params = useParams<{ accessCode: string }>();
@@ -26,6 +32,8 @@ export default function PublicGamePage() {
     acceptTerms: false,
   });
   const [playerId, setPlayerId] = useState<string>("");
+  const [quizQuestions, setQuizQuestions] = useState<RegisteredQuestion[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<SubmittedQuizAnswer[]>([]);
   const [formError, setFormError] = useState<string>("");
   const [requestError, setRequestError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -33,7 +41,7 @@ export default function PublicGamePage() {
   const [quizFeedback, setQuizFeedback] = useState<string>("");
   const [spinResult, setSpinResult] = useState<string>("");
 
-  const activeQuestion = useMemo(() => MOCK_QUIZ_QUESTIONS[quizIndex], [quizIndex]);
+  const activeQuestion = useMemo(() => quizQuestions[quizIndex], [quizIndex, quizQuestions]);
 
   const handleStartQuiz = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,32 +64,50 @@ export default function PublicGamePage() {
     }
 
     setPlayerId(result.playerId);
+    setQuizQuestions(result.quizQuestions);
+    setSelectedAnswers([]);
     setQuizIndex(0);
     setQuizFeedback("");
     setSpinResult("");
     setStep("quiz");
   };
 
-  const handleAnswer = (selectedIndex: number) => {
+  const handleAnswer = async (answerId: string) => {
     if (!activeQuestion) {
       return;
     }
 
-    if (selectedIndex !== activeQuestion.correctIndex) {
-      setQuizIndex(0);
-      setQuizFeedback("Wrong answer. Restarted from question 1.");
+    const updatedAnswers = [
+      ...selectedAnswers.filter((item) => item.questionId !== activeQuestion.id),
+      { questionId: activeQuestion.id, answerId },
+    ];
+    setSelectedAnswers(updatedAnswers);
+
+    const isLastQuestion = quizIndex === quizQuestions.length - 1;
+    if (!isLastQuestion) {
+      setQuizIndex((current) => current + 1);
+      setQuizFeedback("");
       return;
     }
 
-    const isLastQuestion = quizIndex === MOCK_QUIZ_QUESTIONS.length - 1;
-    if (isLastQuestion) {
+    setIsLoading(true);
+    setRequestError("");
+    const result = await submitQuizAnswers({
+      accessCode,
+      playerId,
+      answers: updatedAnswers,
+    });
+    setIsLoading(false);
+
+    if (result.success) {
       setQuizFeedback("");
       setStep("quizComplete");
       return;
     }
 
-    setQuizIndex((current) => current + 1);
-    setQuizFeedback("Correct answer. Moving to the next question.");
+    setQuizIndex(0);
+    setSelectedAnswers([]);
+    setQuizFeedback("Wrong answer. Restarted from question 1.");
   };
 
   const handleSpin = async () => {
@@ -127,7 +153,7 @@ export default function PublicGamePage() {
         <Quiz
           question={activeQuestion}
           questionIndex={quizIndex}
-          totalQuestions={MOCK_QUIZ_QUESTIONS.length}
+          totalQuestions={quizQuestions.length}
           feedback={quizFeedback}
           onAnswer={handleAnswer}
         />

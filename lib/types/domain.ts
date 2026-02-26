@@ -38,4 +38,6 @@ export interface Player {
   email: string;
   playedAt: string;
   result: string | null;
+  quizPassed: boolean;
+  quizAttempts: number;
 }
