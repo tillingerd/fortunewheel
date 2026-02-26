@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type {
   DataRepository,
   GameRepository,
@@ -8,113 +7,349 @@ import type {
 } from "@/lib/data/repositories";
 import type { Game, Player, Prize, QuizAnswer, QuizQuestion } from "@/lib/types";
 
+type MemoryStore = {
+  games: Map<string, Game>;
+  gameIdsByAccessCode: Map<string, string>;
+  questions: Map<string, QuizQuestion>;
+  questionIdsByGameId: Map<string, string[]>;
+  answersByQuestionId: Map<string, QuizAnswer[]>;
+  prizes: Map<string, Prize>;
+  prizeIdsByGameId: Map<string, string[]>;
+  players: Map<string, Player>;
+  playerIdsByGameId: Map<string, string[]>;
+  playerIdByEmailByGameId: Map<string, Map<string, string>>;
+};
+
+const memoryStore: MemoryStore = {
+  games: new Map<string, Game>(),
+  gameIdsByAccessCode: new Map<string, string>(),
+  questions: new Map<string, QuizQuestion>(),
+  questionIdsByGameId: new Map<string, string[]>(),
+  answersByQuestionId: new Map<string, QuizAnswer[]>(),
+  prizes: new Map<string, Prize>(),
+  prizeIdsByGameId: new Map<string, string[]>(),
+  players: new Map<string, Player>(),
+  playerIdsByGameId: new Map<string, string[]>(),
+  playerIdByEmailByGameId: new Map<string, Map<string, string>>(),
+};
+
+let seeded = false;
+
+function createId(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function pushUnique(collection: Map<string, string[]>, key: string, value: string): void {
+  const existing = collection.get(key) ?? [];
+  if (!existing.includes(value)) {
+    existing.push(value);
+  }
+  collection.set(key, existing);
+}
+
+function seedMemoryStore(): void {
+  if (seeded) {
+    return;
+  }
+
+  // TODO: remove hardcoded seed data after Firebase + Admin CRUD are implemented.
+  const gameId = "game_test01";
+  const game: Game = {
+    id: gameId,
+    name: "Seed Game TEST01",
+    accessCode: "TEST01",
+    isActive: true,
+    noWinChance: 40,
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryStore.games.set(game.id, game);
+  memoryStore.gameIdsByAccessCode.set(game.accessCode, game.id);
+
+  const questions: QuizQuestion[] = [
+    { id: "q1", gameId, text: "Which planet is known as the Red Planet?", order: 1 },
+    { id: "q2", gameId, text: "What does HTML stand for?", order: 2 },
+    { id: "q3", gameId, text: "How many days are there in a leap year?", order: 3 },
+  ];
+
+  for (const question of questions) {
+    memoryStore.questions.set(question.id, question);
+    pushUnique(memoryStore.questionIdsByGameId, gameId, question.id);
+  }
+
+  memoryStore.answersByQuestionId.set("q1", [
+    { id: "a1_1", questionId: "q1", text: "Venus", isCorrect: false },
+    { id: "a1_2", questionId: "q1", text: "Mars", isCorrect: true },
+    { id: "a1_3", questionId: "q1", text: "Jupiter", isCorrect: false },
+  ]);
+  memoryStore.answersByQuestionId.set("q2", [
+    { id: "a2_1", questionId: "q2", text: "HyperText Markup Language", isCorrect: true },
+    { id: "a2_2", questionId: "q2", text: "HighText Machine Language", isCorrect: false },
+    { id: "a2_3", questionId: "q2", text: "Home Tool Markup Language", isCorrect: false },
+  ]);
+  memoryStore.answersByQuestionId.set("q3", [
+    { id: "a3_1", questionId: "q3", text: "365", isCorrect: false },
+    { id: "a3_2", questionId: "q3", text: "366", isCorrect: true },
+    { id: "a3_3", questionId: "q3", text: "364", isCorrect: false },
+  ]);
+
+  const prizes: Prize[] = [
+    {
+      id: "prize_1",
+      gameId,
+      name: "Gift Card",
+      imageUrl: "/prizes/gift-card.png",
+      stock: 5,
+      wonCount: 0,
+    },
+    {
+      id: "prize_2",
+      gameId,
+      name: "Coffee Mug",
+      imageUrl: "/prizes/coffee-mug.png",
+      stock: 4,
+      wonCount: 0,
+    },
+  ];
+
+  for (const prize of prizes) {
+    memoryStore.prizes.set(prize.id, prize);
+    pushUnique(memoryStore.prizeIdsByGameId, gameId, prize.id);
+  }
+
+  seeded = true;
+}
+
 class MemoryGameRepository implements GameRepository {
+  constructor() {
+    seedMemoryStore();
+  }
+
   async list(): Promise<Game[]> {
-    // TODO: read from in-memory game collection.
-    return [];
+    return Array.from(memoryStore.games.values()).map((game) => clone(game));
   }
 
-  async getById(_id: string): Promise<Game | null> {
-    // TODO: load by id.
-    return null;
+  async getById(id: string): Promise<Game | null> {
+    const game = memoryStore.games.get(id);
+    return game ? clone(game) : null;
   }
 
-  async getByAccessCode(_accessCode: string): Promise<Game | null> {
-    // TODO: load by access code.
-    return null;
+  async getByAccessCode(accessCode: string): Promise<Game | null> {
+    const gameId = memoryStore.gameIdsByAccessCode.get(accessCode);
+    if (!gameId) {
+      return null;
+    }
+
+    const game = memoryStore.games.get(gameId);
+    return game ? clone(game) : null;
   }
 
   async create(input: Omit<Game, "id" | "createdAt">): Promise<Game> {
-    // TODO: generate id and persist entity in memory.
-    return {
+    const createdGame: Game = {
       ...input,
-      id: "todo-game-id",
+      id: createId("game"),
       createdAt: new Date().toISOString(),
     };
+
+    memoryStore.games.set(createdGame.id, createdGame);
+    memoryStore.gameIdsByAccessCode.set(createdGame.accessCode, createdGame.id);
+    return clone(createdGame);
   }
 
   async update(
-    _id: string,
-    _input: Partial<Omit<Game, "id" | "createdAt">>,
+    id: string,
+    input: Partial<Omit<Game, "id" | "createdAt">>,
   ): Promise<Game | null> {
-    // TODO: update in-memory entity.
-    return null;
+    const existing = memoryStore.games.get(id);
+    if (!existing) {
+      return null;
+    }
+
+    const previousAccessCode = existing.accessCode;
+    const updated: Game = {
+      ...existing,
+      ...input,
+      id: existing.id,
+      createdAt: existing.createdAt,
+    };
+
+    memoryStore.games.set(id, updated);
+    if (input.accessCode && input.accessCode !== previousAccessCode) {
+      memoryStore.gameIdsByAccessCode.delete(previousAccessCode);
+      memoryStore.gameIdsByAccessCode.set(input.accessCode, id);
+    }
+
+    return clone(updated);
   }
 
-  async delete(_id: string): Promise<void> {
-    // TODO: remove in-memory game entity.
+  async delete(id: string): Promise<void> {
+    const existing = memoryStore.games.get(id);
+    if (!existing) {
+      return;
+    }
+
+    memoryStore.gameIdsByAccessCode.delete(existing.accessCode);
+    memoryStore.games.delete(id);
   }
 }
 
 class MemoryQuizRepository implements QuizRepository {
-  async listQuestionsByGameId(_gameId: string): Promise<QuizQuestion[]> {
-    // TODO: read game questions from memory.
-    return [];
+  constructor() {
+    seedMemoryStore();
   }
 
-  async listAnswersByQuestionId(_questionId: string): Promise<QuizAnswer[]> {
-    // TODO: read answers from memory.
-    return [];
+  async listQuestionsByGameId(gameId: string): Promise<QuizQuestion[]> {
+    const questionIds = memoryStore.questionIdsByGameId.get(gameId) ?? [];
+    const questions = questionIds
+      .map((questionId) => memoryStore.questions.get(questionId))
+      .filter((question): question is QuizQuestion => Boolean(question))
+      .sort((left, right) => left.order - right.order);
+
+    return questions.map((question) => clone(question));
+  }
+
+  async listAnswersByQuestionId(questionId: string): Promise<QuizAnswer[]> {
+    const answers = memoryStore.answersByQuestionId.get(questionId) ?? [];
+    return answers.map((answer) => clone(answer));
   }
 
   async upsertQuestion(input: QuizQuestion): Promise<QuizQuestion> {
-    // TODO: insert or update in-memory question.
-    return input;
+    memoryStore.questions.set(input.id, clone(input));
+    pushUnique(memoryStore.questionIdsByGameId, input.gameId, input.id);
+    return clone(input);
   }
 
   async upsertAnswer(input: QuizAnswer): Promise<QuizAnswer> {
-    // TODO: insert or update in-memory answer.
-    return input;
+    const currentAnswers = memoryStore.answersByQuestionId.get(input.questionId) ?? [];
+    const filteredAnswers = currentAnswers.filter((answer) => answer.id !== input.id);
+    filteredAnswers.push(clone(input));
+    memoryStore.answersByQuestionId.set(input.questionId, filteredAnswers);
+    return clone(input);
   }
 
-  async deleteQuestion(_id: string): Promise<void> {
-    // TODO: delete in-memory question.
+  async deleteQuestion(id: string): Promise<void> {
+    const question = memoryStore.questions.get(id);
+    if (!question) {
+      return;
+    }
+
+    memoryStore.questions.delete(id);
+    memoryStore.answersByQuestionId.delete(id);
+    const gameQuestionIds = memoryStore.questionIdsByGameId.get(question.gameId) ?? [];
+    memoryStore.questionIdsByGameId.set(
+      question.gameId,
+      gameQuestionIds.filter((questionId) => questionId !== id),
+    );
   }
 
-  async deleteAnswer(_id: string): Promise<void> {
-    // TODO: delete in-memory answer.
+  async deleteAnswer(id: string): Promise<void> {
+    for (const [questionId, answers] of memoryStore.answersByQuestionId.entries()) {
+      const nextAnswers = answers.filter((answer) => answer.id !== id);
+      if (nextAnswers.length !== answers.length) {
+        memoryStore.answersByQuestionId.set(questionId, nextAnswers);
+        return;
+      }
+    }
   }
 }
 
 class MemoryPrizeRepository implements PrizeRepository {
-  async listByGameId(_gameId: string): Promise<Prize[]> {
-    // TODO: read prizes by game from memory.
-    return [];
+  constructor() {
+    seedMemoryStore();
+  }
+
+  async listByGameId(gameId: string): Promise<Prize[]> {
+    const prizeIds = memoryStore.prizeIdsByGameId.get(gameId) ?? [];
+    const prizes = prizeIds
+      .map((prizeId) => memoryStore.prizes.get(prizeId))
+      .filter((prize): prize is Prize => Boolean(prize));
+
+    return prizes.map((prize) => clone(prize));
   }
 
   async upsert(input: Prize): Promise<Prize> {
-    // TODO: insert or update prize in memory.
-    return input;
+    memoryStore.prizes.set(input.id, clone(input));
+    pushUnique(memoryStore.prizeIdsByGameId, input.gameId, input.id);
+    return clone(input);
   }
 
-  async delete(_id: string): Promise<void> {
-    // TODO: delete in-memory prize.
+  async delete(id: string): Promise<void> {
+    const prize = memoryStore.prizes.get(id);
+    if (!prize) {
+      return;
+    }
+
+    memoryStore.prizes.delete(id);
+    const gamePrizeIds = memoryStore.prizeIdsByGameId.get(prize.gameId) ?? [];
+    memoryStore.prizeIdsByGameId.set(
+      prize.gameId,
+      gamePrizeIds.filter((prizeId) => prizeId !== id),
+    );
   }
 }
 
 class MemoryPlayerRepository implements PlayerRepository {
-  async listByGameId(_gameId: string): Promise<Player[]> {
-    // TODO: read players by game from memory.
-    return [];
+  constructor() {
+    seedMemoryStore();
   }
 
-  async getByEmail(_gameId: string, _email: string): Promise<Player | null> {
-    // TODO: lookup player by unique email per game.
-    return null;
+  async listByGameId(gameId: string): Promise<Player[]> {
+    const playerIds = memoryStore.playerIdsByGameId.get(gameId) ?? [];
+    const players = playerIds
+      .map((playerId) => memoryStore.players.get(playerId))
+      .filter((player): player is Player => Boolean(player));
+
+    return players.map((player) => clone(player));
+  }
+
+  async getByEmail(gameId: string, email: string): Promise<Player | null> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const playerIdsByEmail = memoryStore.playerIdByEmailByGameId.get(gameId);
+    if (!playerIdsByEmail) {
+      return null;
+    }
+
+    const playerId = playerIdsByEmail.get(normalizedEmail);
+    if (!playerId) {
+      return null;
+    }
+
+    const player = memoryStore.players.get(playerId);
+    return player ? clone(player) : null;
   }
 
   async create(input: Omit<Player, "id" | "playedAt">): Promise<Player> {
-    // TODO: persist player in memory.
-    return {
+    const createdPlayer: Player = {
       ...input,
-      id: "todo-player-id",
+      id: createId("player"),
       playedAt: new Date().toISOString(),
+      email: input.email.trim().toLowerCase(),
     };
+
+    memoryStore.players.set(createdPlayer.id, createdPlayer);
+    pushUnique(memoryStore.playerIdsByGameId, createdPlayer.gameId, createdPlayer.id);
+    const playerIdsByEmail = memoryStore.playerIdByEmailByGameId.get(createdPlayer.gameId) ?? new Map();
+    playerIdsByEmail.set(createdPlayer.email, createdPlayer.id);
+    memoryStore.playerIdByEmailByGameId.set(createdPlayer.gameId, playerIdsByEmail);
+    return clone(createdPlayer);
   }
 
-  async setResult(_playerId: string, _prizeId: string | null): Promise<Player | null> {
-    // TODO: update player result in memory.
-    return null;
+  async setResult(playerId: string, prizeId: string | null): Promise<Player | null> {
+    const existing = memoryStore.players.get(playerId);
+    if (!existing) {
+      return null;
+    }
+
+    const updatedPlayer: Player = {
+      ...existing,
+      result: prizeId,
+    };
+    memoryStore.players.set(playerId, updatedPlayer);
+    return clone(updatedPlayer);
   }
 }
 

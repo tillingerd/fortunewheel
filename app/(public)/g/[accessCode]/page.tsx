@@ -9,8 +9,8 @@ import {
 } from "@/components/game/RegistrationForm";
 import { Quiz } from "@/components/game/Quiz";
 import { SpinPanel } from "@/components/game/SpinPanel";
+import { registerPlayer, spin } from "@/app/(public)/g/[accessCode]/actions";
 import { MOCK_QUIZ_QUESTIONS } from "@/lib/mock/quiz";
-import { spinMock } from "@/lib/mock/spin";
 
 type GameStep = "registration" | "quiz" | "quizComplete" | "spin";
 
@@ -25,32 +25,41 @@ export default function PublicGamePage() {
     email: "",
     acceptTerms: false,
   });
+  const [playerId, setPlayerId] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
+  const [requestError, setRequestError] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [quizIndex, setQuizIndex] = useState<number>(0);
   const [quizFeedback, setQuizFeedback] = useState<string>("");
   const [spinResult, setSpinResult] = useState<string>("");
 
   const activeQuestion = useMemo(() => MOCK_QUIZ_QUESTIONS[quizIndex], [quizIndex]);
 
-  const handleStartQuiz = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleStartQuiz = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim()) {
-      setFormError("Please complete all fields.");
-      return;
-    }
-
-    if (!form.acceptTerms) {
-      setFormError("You must accept the terms.");
-      return;
-    }
-
+    setIsLoading(true);
     setFormError("");
+    setRequestError("");
+
+    const result = await registerPlayer({
+      accessCode,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      acceptTerms: form.acceptTerms,
+    });
+    setIsLoading(false);
+
+    if (!result.success) {
+      setFormError(result.message);
+      return;
+    }
+
+    setPlayerId(result.playerId);
     setQuizIndex(0);
     setQuizFeedback("");
+    setSpinResult("");
     setStep("quiz");
-
-    // TODO: replace with repository call for registration and unique-email validation.
   };
 
   const handleAnswer = (selectedIndex: number) => {
@@ -75,17 +84,35 @@ export default function PublicGamePage() {
     setQuizFeedback("Correct answer. Moving to the next question.");
   };
 
-  const handleSpin = () => {
-    const result = spinMock();
-    setSpinResult(result.message);
+  const handleSpin = async () => {
+    if (!playerId) {
+      setRequestError("Please complete registration first.");
+      return;
+    }
 
-    // TODO: replace with repository/service call (noWinChance, stock checks, persistence).
+    setIsLoading(true);
+    setRequestError("");
+    const result = await spin({ accessCode, playerId });
+    setIsLoading(false);
+
+    if (!result.success) {
+      setRequestError(result.message);
+      return;
+    }
+
+    if (result.outcome === "win" && result.prize) {
+      setSpinResult(`You won: ${result.prize.name}`);
+      return;
+    }
+
+    setSpinResult("No win this time");
   };
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 p-8">
       <h1 className="text-2xl font-semibold">Public Game</h1>
       <p className="text-sm text-zinc-700">Access code: {accessCode}</p>
+      {requestError ? <p className="text-sm text-red-600">{requestError}</p> : null}
 
       {step === "registration" ? (
         <RegistrationForm
@@ -116,7 +143,11 @@ export default function PublicGamePage() {
         </section>
       ) : null}
 
-      {step === "spin" ? <SpinPanel resultMessage={spinResult} onSpin={handleSpin} /> : null}
+      {step === "spin" ? (
+        <SpinPanel resultMessage={spinResult} onSpin={handleSpin} />
+      ) : null}
+
+      {isLoading ? <p className="text-sm text-zinc-600">Processing...</p> : null}
 
       <Link className="underline" href={`/g/${accessCode}/close`}>
         Go to close game page

@@ -1,9 +1,13 @@
 "use client";
 
-import type { MockQuizQuestion } from "@/lib/mock/quiz";
+export type QuizQuestionView = {
+  id: string;
+  prompt: string;
+  options: string[];
+};
 
 type QuizProps = {
-  question: MockQuizQuestion;
+  question: QuizQuestionView;
   questionIndex: number;
   totalQuestions: number;
   feedback: string;

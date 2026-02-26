@@ -2,7 +2,7 @@
 
 type SpinPanelProps = {
   resultMessage: string;
-  onSpin: () => void;
+  onSpin: () => void | Promise<void>;
 };
 
 export function SpinPanel({ resultMessage, onSpin }: SpinPanelProps) {
