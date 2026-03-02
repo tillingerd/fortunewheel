@@ -8,17 +8,35 @@ import {
   listGamesForAdmin,
   type CreateGameInput,
 } from "@/lib/data/services/gameBuilderService";
+import { createGameInputSchema, formatValidationError } from "@/lib/validation/admin";
 
 export async function listGamesAction() {
   return listGamesForAdmin(dataRepository);
 }
 
-export async function createGameAction(input: CreateGameInput) {
+export async function createGameAction(input: CreateGameInput): Promise<
+  | {
+      success: false;
+      code: "VALIDATION_ERROR" | "CREATE_FAILED";
+      message: string;
+    }
+  | never
+> {
+  const parsed = createGameInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      code: "VALIDATION_ERROR",
+      message: formatValidationError(parsed.error),
+    };
+  }
+
   try {
-    await createGameWithContent(dataRepository, input);
+    await createGameWithContent(dataRepository, parsed.data);
   } catch (error) {
     return {
-      success: false as const,
+      success: false,
+      code: "CREATE_FAILED",
       message: error instanceof Error ? error.message : "Failed to create game.",
     };
   }

@@ -8,6 +8,7 @@ import {
   type SubmittedQuizAnswer,
 } from "@/lib/data/services/quizService";
 import { spinForPlayer } from "@/lib/data/services/spinService";
+import { trackEvent } from "@/lib/telemetry/events";
 import type { Game, Player } from "@/lib/types";
 
 export type RegisterPlayerInput = {
@@ -115,11 +116,21 @@ function toExistingResult(
 }
 
 export async function registerPlayer(input: RegisterPlayerInput): Promise<RegisterPlayerResult> {
+  trackEvent({
+    name: "public.register.attempt",
+    accessCode: input.accessCode,
+  });
+
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const email = input.email.trim().toLowerCase();
 
   if (!firstName || !lastName || !email || !input.acceptTerms) {
+    trackEvent({
+      name: "public.register.failed",
+      accessCode: input.accessCode,
+      reason: "VALIDATION_ERROR",
+    });
     return {
       success: false,
       errorCode: "VALIDATION_ERROR",
@@ -129,6 +140,12 @@ export async function registerPlayer(input: RegisterPlayerInput): Promise<Regist
 
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
   if (!game || game.status !== "active") {
+    trackEvent({
+      name: "public.game_unavailable",
+      source: "register",
+      accessCode: input.accessCode,
+      status: game?.status ?? "missing",
+    });
     return {
       success: false,
       errorCode: "GAME_UNAVAILABLE",
@@ -138,6 +155,11 @@ export async function registerPlayer(input: RegisterPlayerInput): Promise<Regist
 
   const existingPlayer = await dataRepository.players.getByEmail(game.id, email);
   if (existingPlayer) {
+    trackEvent({
+      name: "public.register.failed",
+      accessCode: input.accessCode,
+      reason: "EMAIL_ALREADY_PLAYED",
+    });
     return {
       success: false,
       errorCode: "EMAIL_ALREADY_PLAYED",
@@ -156,14 +178,33 @@ export async function registerPlayer(input: RegisterPlayerInput): Promise<Regist
   });
 
   const quizQuestions = await getQuizQuestionsForGame(dataRepository, game.id);
+  trackEvent({
+    name: "public.register.success",
+    accessCode: input.accessCode,
+    gameId: game.id,
+    playerId: player.id,
+  });
   return { success: true, playerId: player.id, quizQuestions };
 }
 
 export async function submitQuizAnswers(
   input: SubmitQuizAnswersInput,
 ): Promise<SubmitQuizAnswersResult> {
+  trackEvent({
+    name: "public.quiz.submit",
+    accessCode: input.accessCode,
+    playerId: input.playerId,
+    answersCount: input.answers.length,
+  });
+
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
   if (!game || game.status !== "active") {
+    trackEvent({
+      name: "public.game_unavailable",
+      source: "quiz",
+      accessCode: input.accessCode,
+      status: game?.status ?? "missing",
+    });
     return { success: false, reset: true };
   }
   const submission = await submitQuizForPlayer(dataRepository, {
@@ -171,12 +212,30 @@ export async function submitQuizAnswers(
     playerId: input.playerId,
     answers: input.answers,
   });
+  trackEvent({
+    name: "public.quiz.result",
+    accessCode: input.accessCode,
+    playerId: input.playerId,
+    success: submission.success,
+  });
   return submission.success ? { success: true } : { success: false, reset: true };
 }
 
 export async function spin(input: SpinInput): Promise<SpinResult> {
+  trackEvent({
+    name: "public.spin.attempt",
+    accessCode: input.accessCode,
+    playerId: input.playerId,
+  });
+
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
   if (!game || game.status !== "active") {
+    trackEvent({
+      name: "public.game_unavailable",
+      source: "spin",
+      accessCode: input.accessCode,
+      status: game?.status ?? "missing",
+    });
     return {
       success: false,
       code: "GAME_UNAVAILABLE",
@@ -192,6 +251,13 @@ export async function spin(input: SpinInput): Promise<SpinResult> {
     if (serviceResult.code === "ALREADY_SPUN") {
       const player = await dataRepository.players.getById(input.playerId);
       const prizes = await dataRepository.prizes.listByGameId(game.id);
+      trackEvent({
+        name: "public.spin.result",
+        accessCode: input.accessCode,
+        playerId: input.playerId,
+        success: false,
+        errorCode: "ALREADY_SPUN",
+      });
       return {
         success: false,
         code: "ALREADY_SPUN",
@@ -205,6 +271,13 @@ export async function spin(input: SpinInput): Promise<SpinResult> {
       };
     }
 
+    trackEvent({
+      name: "public.spin.result",
+      accessCode: input.accessCode,
+      playerId: input.playerId,
+      success: false,
+      errorCode: serviceResult.code,
+    });
     return {
       success: false,
       code: serviceResult.code,
@@ -213,6 +286,13 @@ export async function spin(input: SpinInput): Promise<SpinResult> {
   }
 
   if (serviceResult.outcome === "win") {
+    trackEvent({
+      name: "public.spin.result",
+      accessCode: input.accessCode,
+      playerId: input.playerId,
+      success: true,
+      outcome: "win",
+    });
     return {
       success: true,
       outcome: "win",
@@ -221,9 +301,23 @@ export async function spin(input: SpinInput): Promise<SpinResult> {
   }
 
   if (serviceResult.outcome === "noWin") {
+    trackEvent({
+      name: "public.spin.result",
+      accessCode: input.accessCode,
+      playerId: input.playerId,
+      success: true,
+      outcome: "noWin",
+    });
     return { success: true, outcome: "noWin" };
   }
 
+  trackEvent({
+    name: "public.spin.result",
+    accessCode: input.accessCode,
+    playerId: input.playerId,
+    success: true,
+    outcome: "outOfStock",
+  });
   return { success: true, outcome: "outOfStock" };
 }
 

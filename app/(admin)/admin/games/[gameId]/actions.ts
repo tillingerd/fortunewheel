@@ -8,7 +8,11 @@ import {
   updateGameStatusForAdmin,
   updatePrizeStockForAdmin,
 } from "@/lib/data/services/gameBuilderService";
-import type { GameStatus } from "@/lib/types";
+import {
+  formatValidationError,
+  updateGameStatusInputSchema,
+  updatePrizeStockInputSchema,
+} from "@/lib/validation/admin";
 
 export type GameDetailResult =
   | {
@@ -45,35 +49,55 @@ export async function getGameDetailAction(gameId: string): Promise<GameDetailRes
 
 export async function updateGameStatusAction(input: {
   gameId: string;
-  status: GameStatus;
-}): Promise<{ success: false; message: string } | never> {
-  const updated = await updateGameStatusForAdmin(dataRepository, input);
+  status: string;
+}): Promise<{ success: false; code: "VALIDATION_ERROR" | "NOT_FOUND"; message: string } | never> {
+  const parsed = updateGameStatusInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      code: "VALIDATION_ERROR",
+      message: formatValidationError(parsed.error),
+    };
+  }
+
+  const updated = await updateGameStatusForAdmin(dataRepository, parsed.data);
   if (!updated) {
     return {
       success: false,
+      code: "NOT_FOUND",
       message: "Game not found.",
     };
   }
 
   revalidatePath("/admin/games");
-  revalidatePath(`/admin/games/${input.gameId}`);
-  redirect(`/admin/games/${input.gameId}`);
+  revalidatePath(`/admin/games/${parsed.data.gameId}`);
+  redirect(`/admin/games/${parsed.data.gameId}`);
 }
 
 export async function updatePrizeStockAction(input: {
   gameId: string;
   prizeId: string;
   stock: number;
-}): Promise<{ success: false; message: string } | never> {
-  const updated = await updatePrizeStockForAdmin(dataRepository, input);
+}): Promise<{ success: false; code: "VALIDATION_ERROR" | "NOT_FOUND"; message: string } | never> {
+  const parsed = updatePrizeStockInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      code: "VALIDATION_ERROR",
+      message: formatValidationError(parsed.error),
+    };
+  }
+
+  const updated = await updatePrizeStockForAdmin(dataRepository, parsed.data);
   if (!updated) {
     return {
       success: false,
+      code: "NOT_FOUND",
       message: "Prize not found.",
     };
   }
 
   revalidatePath("/admin/games");
-  revalidatePath(`/admin/games/${input.gameId}`);
-  redirect(`/admin/games/${input.gameId}`);
+  revalidatePath(`/admin/games/${parsed.data.gameId}`);
+  redirect(`/admin/games/${parsed.data.gameId}`);
 }

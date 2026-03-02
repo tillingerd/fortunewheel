@@ -20,6 +20,32 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Local CI
+
+Run the local CI pipeline (fail-fast) with:
+
+```bash
+npm run ci
+```
+
+It runs, in order:
+
+1. `npx tsc --noEmit`
+2. `npm run lint`
+3. `npm run test`
+4. `npm run build -- --webpack`
+
+## Git Hooks (Husky)
+
+This repo uses Husky to run local checks before push.
+
+- On `npm install`, the `prepare` script installs Husky hooks automatically.
+- The `pre-push` hook runs:
+
+```bash
+npm run ci
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
