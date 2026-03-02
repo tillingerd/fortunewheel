@@ -146,5 +146,26 @@ describe("spinService", () => {
     const totalStockAfter = prizesAfter.reduce((sum, prize) => sum + prize.stock, 0);
     expect(totalStockBefore - totalStockAfter).toBeLessThanOrEqual(1);
   });
-});
 
+  it("returns PLAYER_NOT_FOUND for unknown playerId and does not decrement stock", async () => {
+    const game = await getSeededGame();
+    await dataRepository.games.updateGame(game.id, { noWinChance: 0 });
+    const prizesBefore = await dataRepository.prizes.listByGameId(game.id);
+    const totalStockBefore = prizesBefore.reduce((sum, prize) => sum + prize.stock, 0);
+
+    const result = await spinForPlayer(dataRepository, {
+      gameId: game.id,
+      playerId: "missing-player-id",
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) {
+      throw new Error("Expected error result");
+    }
+    expect(result.code).toBe("PLAYER_NOT_FOUND");
+
+    const prizesAfter = await dataRepository.prizes.listByGameId(game.id);
+    const totalStockAfter = prizesAfter.reduce((sum, prize) => sum + prize.stock, 0);
+    expect(totalStockAfter).toBe(totalStockBefore);
+  });
+});

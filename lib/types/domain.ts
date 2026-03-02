@@ -39,6 +39,7 @@ export interface Player {
   lastName: string;
   email: string;
   playedAt: string;
+  // `undefined` means the player has not spun yet; `null` means spun with no win.
   result: string | null | undefined;
   quizPassed: boolean;
   quizAttempts: number;
