@@ -16,6 +16,10 @@ export type SpinServiceResult =
       outcome: "noWin";
     }
   | {
+      success: true;
+      outcome: "outOfStock";
+    }
+  | {
       success: false;
       code: "PLAYER_NOT_FOUND" | "QUIZ_NOT_PASSED" | "ALREADY_SPUN";
       message: string;
@@ -78,9 +82,13 @@ export async function spinForPlayer(
     const availablePrizes = (await repository.prizes.listByGameId(input.gameId)).filter(
       (prize) => prize.stock > 0,
     );
-    const noWinRoll = Math.random() * 100 < game.noWinChance;
+    if (availablePrizes.length === 0) {
+      await repository.players.setResult(player.id, null);
+      return { success: true, outcome: "outOfStock" };
+    }
 
-    if (noWinRoll || availablePrizes.length === 0) {
+    const noWinRoll = Math.random() * 100 < game.noWinChance;
+    if (noWinRoll) {
       await repository.players.setResult(player.id, null);
       return { success: true, outcome: "noWin" };
     }
@@ -103,4 +111,3 @@ export async function spinForPlayer(
     };
   });
 }
-

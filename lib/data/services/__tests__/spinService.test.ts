@@ -117,15 +117,49 @@ describe("spinService", () => {
     expect(prizesAfter.every((prize) => prize.stock >= 0)).toBe(true);
   });
 
+  it("returns outOfStock when all prizes have zero stock and keeps stock unchanged", async () => {
+    const game = await getSeededGame();
+    await dataRepository.games.updateGame(game.id, { noWinChance: 0 });
+    const prizesBefore = await dataRepository.prizes.listByGameId(game.id);
+    for (const prize of prizesBefore) {
+      await dataRepository.prizes.upsert({ ...prize, stock: 0 });
+    }
+    const player = await createPlayerForSpin(game.id, {
+      email: "all-zero@spin.test",
+      result: undefined,
+    });
+
+    const result = await spinForPlayer(dataRepository, {
+      gameId: game.id,
+      playerId: player.id,
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      throw new Error("Expected success result");
+    }
+    expect(result.outcome).toBe("outOfStock");
+
+    const prizesAfter = await dataRepository.prizes.listByGameId(game.id);
+    expect(prizesAfter).toEqual(prizesBefore.map((prize) => ({ ...prize, stock: 0 })));
+  });
+
   it("is race-safe: concurrent spins for same player only decrement stock once", async () => {
     const game = await getSeededGame();
     await dataRepository.games.updateGame(game.id, { noWinChance: 0 });
+    const prizes = await dataRepository.prizes.listByGameId(game.id);
+    const firstPrize = prizes[0] as Prize;
+    const otherPrizes = prizes.slice(1);
+    await dataRepository.prizes.upsert({ ...firstPrize, stock: 1 });
+    for (const prize of otherPrizes) {
+      await dataRepository.prizes.upsert({ ...prize, stock: 0 });
+    }
+
     const player = await createPlayerForSpin(game.id, {
       email: "race@spin.test",
       result: undefined,
     });
-    const prizesBefore = await dataRepository.prizes.listByGameId(game.id);
-    const totalStockBefore = prizesBefore.reduce((sum, prize) => sum + prize.stock, 0);
+    const totalStockBefore = 1;
 
     vi.spyOn(Math, "random").mockReturnValue(0);
     const [first, second] = await Promise.all([
@@ -144,7 +178,9 @@ describe("spinService", () => {
 
     const prizesAfter = await dataRepository.prizes.listByGameId(game.id);
     const totalStockAfter = prizesAfter.reduce((sum, prize) => sum + prize.stock, 0);
-    expect(totalStockBefore - totalStockAfter).toBeLessThanOrEqual(1);
+    const updatedFirstPrize = prizesAfter.find((prize) => prize.id === firstPrize.id);
+    expect(updatedFirstPrize?.stock).toBe(0);
+    expect(totalStockBefore - totalStockAfter).toBe(1);
   });
 
   it("returns PLAYER_NOT_FOUND for unknown playerId and does not decrement stock", async () => {

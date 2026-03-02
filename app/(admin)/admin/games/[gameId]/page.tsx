@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { getGameDetailAction, updateGameStatusAction } from "./actions";
+import {
+  getGameDetailAction,
+  updateGameStatusAction,
+  updatePrizeStockAction,
+} from "./actions";
 import type { GameStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +40,18 @@ export default async function AdminGameDetailPage({ params }: AdminGameDetailPag
     await updateGameStatusAction({
       gameId,
       status: nextStatus,
+    });
+  }
+
+  async function updatePrizeStockFormAction(formData: FormData) {
+    "use server";
+    const prizeId = String(formData.get("prizeId") ?? "");
+    const parsedStock = Number(formData.get("stock") ?? 0);
+    const stock = Number.isFinite(parsedStock) ? parsedStock : 0;
+    await updatePrizeStockAction({
+      gameId,
+      prizeId,
+      stock,
     });
   }
 
@@ -87,7 +103,22 @@ export default async function AdminGameDetailPage({ params }: AdminGameDetailPag
               {detail.prizes.map((prize) => (
                 <tr key={prize.id}>
                   <td className="border-b py-2">{prize.name}</td>
-                  <td className="border-b py-2">{prize.stock}</td>
+                  <td className="border-b py-2">
+                    <form action={updatePrizeStockFormAction} className="flex items-center gap-2">
+                      <input name="prizeId" type="hidden" value={prize.id} />
+                      <input
+                        className="w-24 rounded border px-2 py-1"
+                        defaultValue={prize.stock}
+                        min={0}
+                        name="stock"
+                        step={1}
+                        type="number"
+                      />
+                      <button className="rounded border px-3 py-1" type="submit">
+                        Save stock
+                      </button>
+                    </form>
+                  </td>
                   <td className="border-b py-2 font-mono text-xs">{prize.id}</td>
                 </tr>
               ))}

@@ -6,6 +6,7 @@ import { dataRepository } from "@/lib/data";
 import {
   getGameDetailForAdmin,
   updateGameStatusForAdmin,
+  updatePrizeStockForAdmin,
 } from "@/lib/data/services/gameBuilderService";
 import type { GameStatus } from "@/lib/types";
 
@@ -59,3 +60,20 @@ export async function updateGameStatusAction(input: {
   redirect(`/admin/games/${input.gameId}`);
 }
 
+export async function updatePrizeStockAction(input: {
+  gameId: string;
+  prizeId: string;
+  stock: number;
+}): Promise<{ success: false; message: string } | never> {
+  const updated = await updatePrizeStockForAdmin(dataRepository, input);
+  if (!updated) {
+    return {
+      success: false,
+      message: "Prize not found.",
+    };
+  }
+
+  revalidatePath("/admin/games");
+  revalidatePath(`/admin/games/${input.gameId}`);
+  redirect(`/admin/games/${input.gameId}`);
+}

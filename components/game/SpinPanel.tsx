@@ -11,7 +11,7 @@ type SpinPanelProps = {
   disabled?: boolean;
   isSpinning?: boolean;
   note?: string;
-  outcome?: "win" | "noWin" | null;
+  outcome?: "win" | "noWin" | "outOfStock" | null;
   reducedMotion?: boolean;
 };
 
@@ -34,10 +34,9 @@ export function SpinPanel({
         </Button>
       </div>
       <div className="mt-3">
-        <ResultCard message={resultMessage} />
+        <ResultCard message={resultMessage} outcome={outcome} />
       </div>
       {note ? <p className="mt-2 text-xs text-zinc-600">{note}</p> : null}
     </Card>
   );
 }
-

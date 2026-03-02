@@ -362,6 +362,11 @@ class MemoryPrizeRepository implements PrizeRepository {
     return prizes.map((prize) => clone(prize));
   }
 
+  async getById(prizeId: string): Promise<Prize | null> {
+    const prize = memoryStore.prizes.get(prizeId);
+    return prize ? clone(prize) : null;
+  }
+
   async upsert(input: Prize): Promise<Prize> {
     memoryStore.prizes.set(input.id, clone(input));
     pushUnique(memoryStore.prizeIdsByGameId, input.gameId, input.id);

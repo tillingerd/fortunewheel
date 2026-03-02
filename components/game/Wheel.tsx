@@ -10,7 +10,7 @@ export function Wheel({
   onSpinStart,
 }: {
   isSpinning: boolean;
-  outcome: "win" | "noWin" | null;
+  outcome: "win" | "noWin" | "outOfStock" | null;
   reducedMotion: boolean;
   onSpinStart?: () => void;
 }) {

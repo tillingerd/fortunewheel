@@ -25,6 +25,7 @@ export interface QuizRepository {
 
 export interface PrizeRepository {
   listByGameId(gameId: string): Promise<Prize[]>;
+  getById(prizeId: string): Promise<Prize | null>;
   upsert(input: Prize): Promise<Prize>;
   delete(id: string): Promise<void>;
 }

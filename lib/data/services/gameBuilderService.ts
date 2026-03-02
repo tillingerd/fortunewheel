@@ -215,3 +215,25 @@ export async function updateGameStatusForAdmin(
   });
   return Boolean(updated);
 }
+
+export async function updatePrizeStockForAdmin(
+  repository: DataRepository,
+  input: { gameId: string; prizeId: string; stock: number },
+): Promise<boolean> {
+  const game = await repository.games.getGameById(input.gameId);
+  if (!game) {
+    return false;
+  }
+
+  const existingPrize = await repository.prizes.getById(input.prizeId);
+  if (!existingPrize || existingPrize.gameId !== input.gameId) {
+    return false;
+  }
+
+  const normalizedStock = Number.isFinite(input.stock) ? Math.max(0, Math.floor(input.stock)) : 0;
+  await repository.prizes.upsert({
+    ...existingPrize,
+    stock: normalizedStock,
+  });
+  return true;
+}

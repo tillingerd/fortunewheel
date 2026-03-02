@@ -72,7 +72,7 @@ export default function PublicGamePage() {
   const [quizFeedback, setQuizFeedback] = useState<string>("");
   const [spinResult, setSpinResult] = useState<string>("");
   const [spinNote, setSpinNote] = useState<string>("");
-  const [spinOutcome, setSpinOutcome] = useState<"win" | "noWin" | null>(null);
+  const [spinOutcome, setSpinOutcome] = useState<"win" | "noWin" | "outOfStock" | null>(null);
   const [confettiKey, setConfettiKey] = useState<string>("");
 
   const activeQuestion = useMemo(() => quizQuestions[quizIndex], [quizIndex, quizQuestions]);
@@ -251,6 +251,9 @@ export default function PublicGamePage() {
       setSpinResult(`You won: ${result.prize.name}`);
       setSpinOutcome("win");
       setConfettiKey(`win-${playerId}-${Date.now()}`);
+    } else if (result.outcome === "outOfStock") {
+      setSpinResult("Sorry, prizes are out of stock.");
+      setSpinOutcome("outOfStock");
     } else {
       setSpinResult("No win this time");
       setSpinOutcome("noWin");
@@ -329,4 +332,3 @@ export default function PublicGamePage() {
     </PublicShell>
   );
 }
-

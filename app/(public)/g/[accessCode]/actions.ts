@@ -46,17 +46,14 @@ export type SpinInput = {
 export type SpinResult =
   | {
       success: true;
-      outcome: "win" | "noWin";
+      outcome: "win" | "noWin" | "outOfStock";
       prize?: { id: string; name: string };
     }
   | {
       success: false;
       code: "GAME_UNAVAILABLE" | "PLAYER_NOT_FOUND" | "ALREADY_SPUN" | "QUIZ_NOT_PASSED";
       message: string;
-      existingResult?: {
-        outcome: "win" | "noWin";
-        prize?: { id: string; name: string };
-      };
+      existingResult?: ExistingResult;
     };
 
 export type GetPlayerStateInput = {
@@ -223,7 +220,11 @@ export async function spin(input: SpinInput): Promise<SpinResult> {
     };
   }
 
-  return { success: true, outcome: "noWin" };
+  if (serviceResult.outcome === "noWin") {
+    return { success: true, outcome: "noWin" };
+  }
+
+  return { success: true, outcome: "outOfStock" };
 }
 
 export async function getPlayerState(input: GetPlayerStateInput): Promise<GetPlayerStateResult> {
