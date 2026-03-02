@@ -1,11 +1,18 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ResultCard } from "@/components/game/ResultCard";
+import { Wheel } from "@/components/game/Wheel";
+
 type SpinPanelProps = {
   resultMessage: string;
   onSpin: () => void | Promise<void>;
   disabled?: boolean;
   isSpinning?: boolean;
   note?: string;
+  outcome?: "win" | "noWin" | null;
+  reducedMotion?: boolean;
 };
 
 export function SpinPanel({
@@ -14,24 +21,23 @@ export function SpinPanel({
   disabled = false,
   isSpinning = false,
   note,
+  outcome = null,
+  reducedMotion = false,
 }: SpinPanelProps) {
   return (
-    <section className="rounded border p-4 text-sm">
-      <h2 className="mb-2 text-lg font-medium">Step 3: Spin</h2>
-      <button
-        className="rounded border px-4 py-2 disabled:opacity-50"
-        type="button"
-        onClick={onSpin}
-        disabled={disabled}
-      >
-        {isSpinning ? "Spinning..." : "Spin"}
-      </button>
-      {resultMessage ? (
-        <div className="mt-3 rounded border bg-zinc-50 px-3 py-2">
-          <p>{resultMessage}</p>
-        </div>
-      ) : null}
+    <Card className="text-sm">
+      <h2 className="mb-4 text-lg font-semibold text-zinc-900">Step 3: Spin</h2>
+      <Wheel isSpinning={isSpinning} outcome={outcome} reducedMotion={reducedMotion} />
+      <div className="mt-4">
+        <Button onClick={onSpin} disabled={disabled}>
+          {isSpinning ? "Spinning..." : "Spin"}
+        </Button>
+      </div>
+      <div className="mt-3">
+        <ResultCard message={resultMessage} />
+      </div>
       {note ? <p className="mt-2 text-xs text-zinc-600">{note}</p> : null}
-    </section>
+    </Card>
   );
 }
+

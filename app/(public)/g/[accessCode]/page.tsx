@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   RegistrationForm,
   type RegistrationFormValues,
@@ -10,6 +11,11 @@ import {
 import { Quiz } from "@/components/game/Quiz";
 import { SpinPanel } from "@/components/game/SpinPanel";
 import { Alert } from "@/components/ui/Alert";
+import { PublicShell } from "@/components/game/PublicShell";
+import { StepHeader } from "@/components/game/StepHeader";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ConfettiBurst } from "@/components/game/ConfettiBurst";
 import {
   getPlayerState,
   registerPlayer,
@@ -22,10 +28,27 @@ import type { SubmittedQuizAnswer } from "@/lib/data/services/quizService";
 type GameStep = "registration" | "quiz" | "quizComplete" | "spin";
 type RegisteredQuestion = Extract<RegisterPlayerResult, { success: true }>["quizQuestions"][number];
 
+function PanelTransition({ children, panelKey }: { children: React.ReactNode; panelKey: string }) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={panelKey}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.22 }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function PublicGamePage() {
   const params = useParams<{ accessCode: string }>();
   const accessCode = Array.isArray(params.accessCode) ? params.accessCode[0] : params.accessCode;
   const storageKey = `fw_playerId_${accessCode}`;
+  const reducedMotion = useReducedMotion() ?? false;
 
   const [step, setStep] = useState<GameStep>("registration");
   const [form, setForm] = useState<RegistrationFormValues>({
@@ -49,6 +72,8 @@ export default function PublicGamePage() {
   const [quizFeedback, setQuizFeedback] = useState<string>("");
   const [spinResult, setSpinResult] = useState<string>("");
   const [spinNote, setSpinNote] = useState<string>("");
+  const [spinOutcome, setSpinOutcome] = useState<"win" | "noWin" | null>(null);
+  const [confettiKey, setConfettiKey] = useState<string>("");
 
   const activeQuestion = useMemo(() => quizQuestions[quizIndex], [quizIndex, quizQuestions]);
 
@@ -87,8 +112,11 @@ export default function PublicGamePage() {
       if (result.existingResult) {
         if (result.existingResult.outcome === "win" && result.existingResult.prize) {
           setSpinResult(`You won: ${result.existingResult.prize.name}`);
+          setSpinOutcome("win");
+          setConfettiKey(`resume-${result.player.id}`);
         } else {
           setSpinResult("No win this time");
+          setSpinOutcome("noWin");
         }
         setHasSpun(true);
         setSpinNote("Showing your saved spin result.");
@@ -139,6 +167,7 @@ export default function PublicGamePage() {
     setQuizIndex(0);
     setQuizFeedback("");
     setSpinResult("");
+    setSpinOutcome(null);
     setAlertMessage("");
     setStep("quiz");
   };
@@ -203,8 +232,11 @@ export default function PublicGamePage() {
       if (result.code === "ALREADY_SPUN" && result.existingResult) {
         if (result.existingResult.outcome === "win" && result.existingResult.prize) {
           setSpinResult(`You won: ${result.existingResult.prize.name}`);
+          setSpinOutcome("win");
+          setConfettiKey(`already-${playerId}`);
         } else {
           setSpinResult("No win this time");
+          setSpinOutcome("noWin");
         }
         setHasSpun(true);
         setSpinNote("You already spun the wheel. Showing your saved result.");
@@ -217,65 +249,84 @@ export default function PublicGamePage() {
 
     if (result.outcome === "win" && result.prize) {
       setSpinResult(`You won: ${result.prize.name}`);
+      setSpinOutcome("win");
+      setConfettiKey(`win-${playerId}-${Date.now()}`);
     } else {
       setSpinResult("No win this time");
+      setSpinOutcome("noWin");
     }
     setHasSpun(true);
     setSpinNote("");
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Public Game</h1>
-      <p className="text-sm text-zinc-700">Access code: {accessCode}</p>
+    <PublicShell>
+      <ConfettiBurst triggerKey={spinOutcome === "win" ? confettiKey : ""} disabled={reducedMotion} />
+      <StepHeader accessCode={accessCode} step={step} />
+
       {alertMessage ? <Alert message={alertMessage} tone={alertTone} /> : null}
 
       {step === "registration" ? (
-        <RegistrationForm
-          form={form}
-          isSubmitting={isRegistering}
-          onSubmit={handleStartQuiz}
-          onChange={setForm}
-        />
+        <PanelTransition panelKey="registration">
+          <RegistrationForm
+            form={form}
+            isSubmitting={isRegistering}
+            onSubmit={handleStartQuiz}
+            onChange={setForm}
+          />
+        </PanelTransition>
       ) : null}
 
       {step === "quiz" && activeQuestion ? (
-        <Quiz
-          key={activeQuestion.id}
-          question={activeQuestion}
-          questionIndex={quizIndex}
-          totalQuestions={quizQuestions.length}
-          feedback={quizFeedback}
-          isSubmitting={isQuizSubmitting}
-          onAnswer={handleAnswer}
-        />
+        <PanelTransition panelKey={activeQuestion.id}>
+          <Quiz
+            key={activeQuestion.id}
+            question={activeQuestion}
+            questionIndex={quizIndex}
+            totalQuestions={quizQuestions.length}
+            feedback={quizFeedback}
+            isSubmitting={isQuizSubmitting}
+            onAnswer={handleAnswer}
+          />
+        </PanelTransition>
       ) : null}
 
       {step === "quizComplete" ? (
-        <section className="rounded border p-4 text-sm">
-          <h2 className="mb-2 text-lg font-medium">Step 2: Quiz</h2>
-          <p>Congratulations, your answers are correct!</p>
-          <button className="mt-3 rounded border px-4 py-2" type="button" onClick={() => setStep("spin")}>
-            Let&apos;s spin the wheel!
-          </button>
-        </section>
+        <PanelTransition panelKey="quizComplete">
+          <Card>
+            <h2 className="mb-2 text-lg font-semibold text-zinc-900">Step 2: Quiz</h2>
+            <p className="text-sm text-zinc-700">Congratulations, your answers are correct!</p>
+            <Button className="mt-4" onClick={() => setStep("spin")}>
+              Let&apos;s spin the wheel!
+            </Button>
+          </Card>
+        </PanelTransition>
       ) : null}
 
       {step === "spin" ? (
-        <SpinPanel
-          resultMessage={spinResult}
-          onSpin={handleSpin}
-          disabled={isSpinning || hasSpun || !quizPassed}
-          isSpinning={isSpinning}
-          note={spinNote}
-        />
+        <PanelTransition panelKey="spin">
+          <SpinPanel
+            resultMessage={spinResult}
+            onSpin={handleSpin}
+            disabled={isSpinning || hasSpun || !quizPassed}
+            isSpinning={isSpinning}
+            note={spinNote}
+            outcome={spinOutcome}
+            reducedMotion={reducedMotion}
+          />
+        </PanelTransition>
       ) : null}
 
-      {isResuming ? <p className="text-sm text-zinc-600">Loading saved progress...</p> : null}
+      {isResuming ? (
+        <p className="text-sm text-zinc-600">Loading saved progress...</p>
+      ) : null}
 
-      <Link className="underline" href={`/g/${accessCode}/close`}>
-        Go to close game page
-      </Link>
-    </main>
+      <div className="text-center">
+        <Link className="text-sm font-medium text-zinc-700 underline hover:text-zinc-900" href={`/g/${accessCode}/close`}>
+          Go to close game page
+        </Link>
+      </div>
+    </PublicShell>
   );
 }
+
