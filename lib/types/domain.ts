@@ -1,8 +1,10 @@
+export type GameStatus = "draft" | "active" | "closed";
+
 export interface Game {
   id: string;
   name: string;
   accessCode: string;
-  isActive: boolean;
+  status: GameStatus;
   noWinChance: number;
   createdAt: string;
 }

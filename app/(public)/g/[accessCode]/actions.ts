@@ -7,6 +7,7 @@ import {
   type QuizQuestionView,
   type SubmittedQuizAnswer,
 } from "@/lib/data/services/quizService";
+import type { Game } from "@/lib/types";
 
 export type RegisterPlayerInput = {
   accessCode: string;
@@ -55,6 +56,19 @@ export type SpinResult =
       message: string;
     };
 
+function getGameUnavailableMessage(game: Game | null): string {
+  if (!game) {
+    return "Game not found.";
+  }
+  if (game.status === "draft") {
+    return "This game is in draft mode and not available yet.";
+  }
+  if (game.status === "closed") {
+    return "This game is closed.";
+  }
+  return "Game is not available.";
+}
+
 export async function registerPlayer(
   input: RegisterPlayerInput,
 ): Promise<RegisterPlayerResult> {
@@ -71,11 +85,11 @@ export async function registerPlayer(
   }
 
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
-  if (!game || !game.isActive) {
+  if (!game || game.status !== "active") {
     return {
       success: false,
       errorCode: "GAME_UNAVAILABLE",
-      message: "Game not found or inactive.",
+      message: getGameUnavailableMessage(game),
     };
   }
 
@@ -111,7 +125,7 @@ export async function submitQuizAnswers(
   input: SubmitQuizAnswersInput,
 ): Promise<SubmitQuizAnswersResult> {
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
-  if (!game || !game.isActive) {
+  if (!game || game.status !== "active") {
     return { success: false, reset: true };
   }
 
@@ -137,11 +151,11 @@ export async function submitQuizAnswers(
 
 export async function spin(input: SpinInput): Promise<SpinResult> {
   const game = await dataRepository.games.getByAccessCode(input.accessCode);
-  if (!game || !game.isActive) {
+  if (!game || game.status !== "active") {
     return {
       success: false,
       errorCode: "GAME_UNAVAILABLE",
-      message: "Game not found or inactive.",
+      message: getGameUnavailableMessage(game),
     };
   }
 

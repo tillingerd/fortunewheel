@@ -18,7 +18,12 @@ type MemoryStore = {
   players: Map<string, Player>;
   playerIdsByGameId: Map<string, string[]>;
   playerIdByEmailByGameId: Map<string, Map<string, string>>;
+  seeded: boolean;
 };
+
+declare global {
+  var __FORTUNEWHEEL_MEMORY_STORE__: MemoryStore | undefined;
+}
 
 type SeededQuizQuestion = {
   id: string;
@@ -36,20 +41,25 @@ type SeededGame = {
   prizes: Prize[];
 };
 
-const memoryStore: MemoryStore = {
-  games: new Map<string, Game>(),
-  gameIdsByAccessCode: new Map<string, string>(),
-  questions: new Map<string, QuizQuestion>(),
-  questionIdsByGameId: new Map<string, string[]>(),
-  answersByQuestionId: new Map<string, QuizAnswer[]>(),
-  prizes: new Map<string, Prize>(),
-  prizeIdsByGameId: new Map<string, string[]>(),
-  players: new Map<string, Player>(),
-  playerIdsByGameId: new Map<string, string[]>(),
-  playerIdByEmailByGameId: new Map<string, Map<string, string>>(),
-};
+function createInitialStore(): MemoryStore {
+  return {
+    games: new Map<string, Game>(),
+    gameIdsByAccessCode: new Map<string, string>(),
+    questions: new Map<string, QuizQuestion>(),
+    questionIdsByGameId: new Map<string, string[]>(),
+    answersByQuestionId: new Map<string, QuizAnswer[]>(),
+    prizes: new Map<string, Prize>(),
+    prizeIdsByGameId: new Map<string, string[]>(),
+    players: new Map<string, Player>(),
+    playerIdsByGameId: new Map<string, string[]>(),
+    playerIdByEmailByGameId: new Map<string, Map<string, string>>(),
+    seeded: false,
+  };
+}
 
-let seeded = false;
+const memoryStore: MemoryStore =
+  globalThis.__FORTUNEWHEEL_MEMORY_STORE__ ?? createInitialStore();
+globalThis.__FORTUNEWHEEL_MEMORY_STORE__ = memoryStore;
 
 const SEEDED_GAMES: SeededGame[] = [
   {
@@ -57,7 +67,7 @@ const SEEDED_GAMES: SeededGame[] = [
       id: "game_test01",
       name: "Seed Game TEST01",
       accessCode: "TEST01",
-      isActive: true,
+      status: "active",
       noWinChance: 40,
       createdAt: new Date().toISOString(),
     },
@@ -128,7 +138,7 @@ function pushUnique(collection: Map<string, string[]>, key: string, value: strin
 }
 
 function seedMemoryStore(): void {
-  if (seeded) {
+  if (memoryStore.seeded) {
     return;
   }
 
@@ -163,7 +173,7 @@ function seedMemoryStore(): void {
     }
   }
 
-  seeded = true;
+  memoryStore.seeded = true;
 }
 
 class MemoryGameRepository implements GameRepository {
@@ -175,9 +185,17 @@ class MemoryGameRepository implements GameRepository {
     return Array.from(memoryStore.games.values()).map((game) => clone(game));
   }
 
+  async listGames(): Promise<Game[]> {
+    return this.list();
+  }
+
   async getById(id: string): Promise<Game | null> {
     const game = memoryStore.games.get(id);
     return game ? clone(game) : null;
+  }
+
+  async getGameById(id: string): Promise<Game | null> {
+    return this.getById(id);
   }
 
   async getByAccessCode(accessCode: string): Promise<Game | null> {
@@ -190,6 +208,10 @@ class MemoryGameRepository implements GameRepository {
     return game ? clone(game) : null;
   }
 
+  async getGameByAccessCode(accessCode: string): Promise<Game | null> {
+    return this.getByAccessCode(accessCode);
+  }
+
   async create(input: Omit<Game, "id" | "createdAt">): Promise<Game> {
     const createdGame: Game = {
       ...input,
@@ -200,6 +222,10 @@ class MemoryGameRepository implements GameRepository {
     memoryStore.games.set(createdGame.id, createdGame);
     memoryStore.gameIdsByAccessCode.set(createdGame.accessCode, createdGame.id);
     return clone(createdGame);
+  }
+
+  async createGame(input: Omit<Game, "id" | "createdAt">): Promise<Game> {
+    return this.create(input);
   }
 
   async update(
@@ -226,6 +252,13 @@ class MemoryGameRepository implements GameRepository {
     }
 
     return clone(updated);
+  }
+
+  async updateGame(
+    id: string,
+    input: Partial<Omit<Game, "id" | "createdAt">>,
+  ): Promise<Game | null> {
+    return this.update(id, input);
   }
 
   async delete(id: string): Promise<void> {

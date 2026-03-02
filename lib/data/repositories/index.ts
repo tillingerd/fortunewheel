@@ -2,10 +2,15 @@ import type { Game, Player, Prize, QuizAnswer, QuizQuestion } from "@/lib/types"
 
 export interface GameRepository {
   list(): Promise<Game[]>;
+  listGames(): Promise<Game[]>;
   getById(id: string): Promise<Game | null>;
+  getGameById(id: string): Promise<Game | null>;
   getByAccessCode(accessCode: string): Promise<Game | null>;
+  getGameByAccessCode(accessCode: string): Promise<Game | null>;
   create(input: Omit<Game, "id" | "createdAt">): Promise<Game>;
+  createGame(input: Omit<Game, "id" | "createdAt">): Promise<Game>;
   update(id: string, input: Partial<Omit<Game, "id" | "createdAt">>): Promise<Game | null>;
+  updateGame(id: string, input: Partial<Omit<Game, "id" | "createdAt">>): Promise<Game | null>;
   delete(id: string): Promise<void>;
 }
 

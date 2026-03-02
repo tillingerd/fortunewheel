@@ -8,7 +8,7 @@ export default function HomePage() {
         MVP scaffold for public game flow and admin area.
       </p>
       <div className="flex flex-col gap-2 text-sm">
-        <Link className="underline" href="/g/ABC123">
+        <Link className="underline" href="/g/TEST01">
           Open sample public game route
         </Link>
         <Link className="underline" href="/admin/login">
