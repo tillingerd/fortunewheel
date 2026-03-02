@@ -31,6 +31,7 @@ export interface PrizeRepository {
 
 export interface PlayerRepository {
   listByGameId(gameId: string): Promise<Player[]>;
+  getById(playerId: string): Promise<Player | null>;
   getByEmail(gameId: string, email: string): Promise<Player | null>;
   create(input: Omit<Player, "id" | "playedAt">): Promise<Player>;
   setResult(playerId: string, prizeId: string | null): Promise<Player | null>;

@@ -39,7 +39,7 @@ export interface Player {
   lastName: string;
   email: string;
   playedAt: string;
-  result: string | null;
+  result: string | null | undefined;
   quizPassed: boolean;
   quizAttempts: number;
 }

@@ -56,7 +56,7 @@ export type AdminGameDetail = {
     playedAt: string;
     quizAttempts: number;
     quizPassed: boolean;
-    result: string | null;
+    result: string | null | undefined;
   }>;
 };
 

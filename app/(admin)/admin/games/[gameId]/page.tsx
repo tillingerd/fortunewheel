@@ -71,6 +71,32 @@ export default async function AdminGameDetailPage({ params }: AdminGameDetailPag
       </section>
 
       <section className="rounded border p-4 text-sm">
+        <h2 className="mb-3 text-lg font-medium">Prizes</h2>
+        {detail.prizes.length === 0 ? (
+          <p>No prizes configured.</p>
+        ) : (
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left">
+                <th className="border-b py-2">Prize</th>
+                <th className="border-b py-2">Stock (remaining)</th>
+                <th className="border-b py-2">PrizeId</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.prizes.map((prize) => (
+                <tr key={prize.id}>
+                  <td className="border-b py-2">{prize.name}</td>
+                  <td className="border-b py-2">{prize.stock}</td>
+                  <td className="border-b py-2 font-mono text-xs">{prize.id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="rounded border p-4 text-sm">
         <h2 className="mb-3 text-lg font-medium">Players</h2>
         {detail.players.length === 0 ? (
           <p>No players yet.</p>
@@ -106,4 +132,3 @@ export default async function AdminGameDetailPage({ params }: AdminGameDetailPag
     </main>
   );
 }
-

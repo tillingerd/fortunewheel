@@ -381,6 +381,11 @@ class MemoryPlayerRepository implements PlayerRepository {
     return players.map((player) => clone(player));
   }
 
+  async getById(playerId: string): Promise<Player | null> {
+    const player = memoryStore.players.get(playerId);
+    return player ? clone(player) : null;
+  }
+
   async getByEmail(gameId: string, email: string): Promise<Player | null> {
     const normalizedEmail = email.trim().toLowerCase();
     const playerIdsByEmail = memoryStore.playerIdByEmailByGameId.get(gameId);
