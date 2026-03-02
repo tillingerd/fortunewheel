@@ -61,3 +61,26 @@ export async function validateQuizSubmission(
 
   return { allCorrect: true };
 }
+
+export async function submitQuizForPlayer(
+  repository: DataRepository,
+  input: {
+    gameId: string;
+    playerId: string;
+    answers: SubmittedQuizAnswer[];
+  },
+): Promise<{ success: boolean; reset: boolean }> {
+  const player = await repository.players.getById(input.playerId);
+  if (!player || player.gameId !== input.gameId) {
+    return { success: false, reset: true };
+  }
+
+  const validation = await validateQuizSubmission(repository, input.gameId, input.answers);
+  if (!validation.allCorrect) {
+    await repository.players.updateQuizStatus(player.id, false);
+    return { success: false, reset: true };
+  }
+
+  await repository.players.updateQuizStatus(player.id, true);
+  return { success: true, reset: false };
+}

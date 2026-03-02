@@ -3,7 +3,7 @@
 import { dataRepository } from "@/lib/data";
 import {
   getQuizQuestionsForGame,
-  validateQuizSubmission,
+  submitQuizForPlayer,
   type QuizQuestionView,
   type SubmittedQuizAnswer,
 } from "@/lib/data/services/quizService";
@@ -169,20 +169,12 @@ export async function submitQuizAnswers(
   if (!game || game.status !== "active") {
     return { success: false, reset: true };
   }
-
-  const player = await dataRepository.players.getById(input.playerId);
-  if (!player || player.gameId !== game.id) {
-    return { success: false, reset: true };
-  }
-
-  const validation = await validateQuizSubmission(dataRepository, game.id, input.answers);
-  if (!validation.allCorrect) {
-    await dataRepository.players.updateQuizStatus(player.id, false);
-    return { success: false, reset: true };
-  }
-
-  await dataRepository.players.updateQuizStatus(player.id, true);
-  return { success: true };
+  const submission = await submitQuizForPlayer(dataRepository, {
+    gameId: game.id,
+    playerId: input.playerId,
+    answers: input.answers,
+  });
+  return submission.success ? { success: true } : { success: false, reset: true };
 }
 
 export async function spin(input: SpinInput): Promise<SpinResult> {

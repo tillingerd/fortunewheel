@@ -176,6 +176,22 @@ function seedMemoryStore(): void {
   memoryStore.seeded = true;
 }
 
+// Test-only helper for deterministic unit tests.
+export function __resetMemoryStoreForTests(): void {
+  memoryStore.games.clear();
+  memoryStore.gameIdsByAccessCode.clear();
+  memoryStore.questions.clear();
+  memoryStore.questionIdsByGameId.clear();
+  memoryStore.answersByQuestionId.clear();
+  memoryStore.prizes.clear();
+  memoryStore.prizeIdsByGameId.clear();
+  memoryStore.players.clear();
+  memoryStore.playerIdsByGameId.clear();
+  memoryStore.playerIdByEmailByGameId.clear();
+  memoryStore.seeded = false;
+  seedMemoryStore();
+}
+
 class MemoryGameRepository implements GameRepository {
   constructor() {
     seedMemoryStore();
