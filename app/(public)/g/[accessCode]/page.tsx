@@ -9,6 +9,7 @@ import {
 } from "@/components/game/RegistrationForm";
 import { Quiz } from "@/components/game/Quiz";
 import { SpinPanel } from "@/components/game/SpinPanel";
+import { Alert } from "@/components/ui/Alert";
 import {
   getPlayerState,
   registerPlayer,
@@ -38,13 +39,16 @@ export default function PublicGamePage() {
   const [hasSpun, setHasSpun] = useState<boolean>(false);
   const [quizQuestions, setQuizQuestions] = useState<RegisteredQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<SubmittedQuizAnswer[]>([]);
-  const [formError, setFormError] = useState<string>("");
-  const [requestError, setRequestError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [alertTone, setAlertTone] = useState<"error" | "info">("error");
+  const [isResuming, setIsResuming] = useState<boolean>(false);
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [isQuizSubmitting, setIsQuizSubmitting] = useState<boolean>(false);
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [quizIndex, setQuizIndex] = useState<number>(0);
   const [quizFeedback, setQuizFeedback] = useState<string>("");
   const [spinResult, setSpinResult] = useState<string>("");
+  const [spinNote, setSpinNote] = useState<string>("");
 
   const activeQuestion = useMemo(() => quizQuestions[quizIndex], [quizIndex, quizQuestions]);
 
@@ -57,7 +61,7 @@ export default function PublicGamePage() {
         return;
       }
 
-      setIsLoading(true);
+      setIsResuming(true);
       const result = await getPlayerState({
         accessCode,
         playerId: savedPlayerId,
@@ -65,7 +69,7 @@ export default function PublicGamePage() {
       if (cancelled) {
         return;
       }
-      setIsLoading(false);
+      setIsResuming(false);
 
       if (!result.success) {
         window.localStorage.removeItem(storageKey);
@@ -76,7 +80,8 @@ export default function PublicGamePage() {
       setQuizQuestions(result.quizQuestions);
       setQuizPassed(result.player.quizPassed);
       if (result.statusMessage) {
-        setRequestError(result.statusMessage);
+        setAlertMessage(result.statusMessage);
+        setAlertTone("info");
       }
 
       if (result.existingResult) {
@@ -86,6 +91,7 @@ export default function PublicGamePage() {
           setSpinResult("No win this time");
         }
         setHasSpun(true);
+        setSpinNote("Showing your saved spin result.");
         setStep("spin");
         return;
       }
@@ -105,9 +111,9 @@ export default function PublicGamePage() {
 
   const handleStartQuiz = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsLoading(true);
-    setFormError("");
-    setRequestError("");
+    setIsRegistering(true);
+    setAlertMessage("");
+    setSpinNote("");
 
     const result = await registerPlayer({
       accessCode,
@@ -116,10 +122,11 @@ export default function PublicGamePage() {
       email: form.email,
       acceptTerms: form.acceptTerms,
     });
-    setIsLoading(false);
+    setIsRegistering(false);
 
     if (!result.success) {
-      setFormError(result.message);
+      setAlertMessage(result.message);
+      setAlertTone("error");
       return;
     }
 
@@ -132,6 +139,7 @@ export default function PublicGamePage() {
     setQuizIndex(0);
     setQuizFeedback("");
     setSpinResult("");
+    setAlertMessage("");
     setStep("quiz");
   };
 
@@ -153,14 +161,14 @@ export default function PublicGamePage() {
       return;
     }
 
-    setIsLoading(true);
-    setRequestError("");
+    setIsQuizSubmitting(true);
+    setAlertMessage("");
     const result = await submitQuizAnswers({
       accessCode,
       playerId,
       answers: updatedAnswers,
     });
-    setIsLoading(false);
+    setIsQuizSubmitting(false);
 
     if (result.success) {
       setQuizPassed(true);
@@ -171,12 +179,13 @@ export default function PublicGamePage() {
 
     setQuizIndex(0);
     setSelectedAnswers([]);
-    setQuizFeedback("Wrong answer. Restarted from question 1.");
+    setQuizFeedback("Wrong answer — try again from Question 1.");
   };
 
   const handleSpin = async () => {
     if (!playerId) {
-      setRequestError("Please complete registration first.");
+      setAlertMessage("Please complete registration first.");
+      setAlertTone("error");
       return;
     }
 
@@ -185,12 +194,12 @@ export default function PublicGamePage() {
     }
 
     setIsSpinning(true);
-    setRequestError("");
+    setAlertMessage("");
+    setSpinNote("");
     const result = await spin({ accessCode, playerId });
     setIsSpinning(false);
 
     if (!result.success) {
-      setRequestError(result.message);
       if (result.code === "ALREADY_SPUN" && result.existingResult) {
         if (result.existingResult.outcome === "win" && result.existingResult.prize) {
           setSpinResult(`You won: ${result.existingResult.prize.name}`);
@@ -198,6 +207,10 @@ export default function PublicGamePage() {
           setSpinResult("No win this time");
         }
         setHasSpun(true);
+        setSpinNote("You already spun the wheel. Showing your saved result.");
+      } else {
+        setAlertMessage(result.message);
+        setAlertTone("error");
       }
       return;
     }
@@ -208,18 +221,19 @@ export default function PublicGamePage() {
       setSpinResult("No win this time");
     }
     setHasSpun(true);
+    setSpinNote("");
   };
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 p-8">
       <h1 className="text-2xl font-semibold">Public Game</h1>
       <p className="text-sm text-zinc-700">Access code: {accessCode}</p>
-      {requestError ? <p className="text-sm text-red-600">{requestError}</p> : null}
+      {alertMessage ? <Alert message={alertMessage} tone={alertTone} /> : null}
 
       {step === "registration" ? (
         <RegistrationForm
           form={form}
-          error={formError}
+          isSubmitting={isRegistering}
           onSubmit={handleStartQuiz}
           onChange={setForm}
         />
@@ -227,10 +241,12 @@ export default function PublicGamePage() {
 
       {step === "quiz" && activeQuestion ? (
         <Quiz
+          key={activeQuestion.id}
           question={activeQuestion}
           questionIndex={quizIndex}
           totalQuestions={quizQuestions.length}
           feedback={quizFeedback}
+          isSubmitting={isQuizSubmitting}
           onAnswer={handleAnswer}
         />
       ) : null}
@@ -250,10 +266,12 @@ export default function PublicGamePage() {
           resultMessage={spinResult}
           onSpin={handleSpin}
           disabled={isSpinning || hasSpun || !quizPassed}
+          isSpinning={isSpinning}
+          note={spinNote}
         />
       ) : null}
 
-      {isLoading ? <p className="text-sm text-zinc-600">Processing...</p> : null}
+      {isResuming ? <p className="text-sm text-zinc-600">Loading saved progress...</p> : null}
 
       <Link className="underline" href={`/g/${accessCode}/close`}>
         Go to close game page
@@ -261,4 +279,3 @@ export default function PublicGamePage() {
     </main>
   );
 }
-

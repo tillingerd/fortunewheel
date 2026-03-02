@@ -9,14 +9,14 @@ export type RegistrationFormValues = {
 
 type RegistrationFormProps = {
   form: RegistrationFormValues;
-  error: string;
+  isSubmitting?: boolean;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onChange: (values: RegistrationFormValues) => void;
 };
 
 export function RegistrationForm({
   form,
-  error,
+  isSubmitting = false,
   onSubmit,
   onChange,
 }: RegistrationFormProps) {
@@ -65,10 +65,12 @@ export function RegistrationForm({
           Accept terms
         </label>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-        <button className="w-fit rounded border px-4 py-2" type="submit">
-          Start Quiz
+        <button
+          className="w-fit rounded border px-4 py-2 disabled:opacity-50"
+          type="submit"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Submitting..." : "Start Quiz"}
         </button>
       </form>
     </section>

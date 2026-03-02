@@ -4,9 +4,17 @@ type SpinPanelProps = {
   resultMessage: string;
   onSpin: () => void | Promise<void>;
   disabled?: boolean;
+  isSpinning?: boolean;
+  note?: string;
 };
 
-export function SpinPanel({ resultMessage, onSpin, disabled = false }: SpinPanelProps) {
+export function SpinPanel({
+  resultMessage,
+  onSpin,
+  disabled = false,
+  isSpinning = false,
+  note,
+}: SpinPanelProps) {
   return (
     <section className="rounded border p-4 text-sm">
       <h2 className="mb-2 text-lg font-medium">Step 3: Spin</h2>
@@ -16,9 +24,14 @@ export function SpinPanel({ resultMessage, onSpin, disabled = false }: SpinPanel
         onClick={onSpin}
         disabled={disabled}
       >
-        Spin
+        {isSpinning ? "Spinning..." : "Spin"}
       </button>
-      {resultMessage ? <p className="mt-3">{resultMessage}</p> : null}
+      {resultMessage ? (
+        <div className="mt-3 rounded border bg-zinc-50 px-3 py-2">
+          <p>{resultMessage}</p>
+        </div>
+      ) : null}
+      {note ? <p className="mt-2 text-xs text-zinc-600">{note}</p> : null}
     </section>
   );
 }
