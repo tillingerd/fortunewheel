@@ -139,7 +139,7 @@ export function Wheel({
   return (
     <div className="mx-auto w-full max-w-[320px]">
       <div className="mx-auto mb-2 h-0 w-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-zinc-900" />
-      <div className="relative mx-auto h-72 w-72">
+      <div className="relative mx-auto h-64 w-full max-w-[320px] sm:h-72">
         <div
           ref={wheelRef}
           className="absolute inset-0 rounded-full border-[10px] border-white shadow-[0_16px_40px_rgba(0,0,0,0.16)]"

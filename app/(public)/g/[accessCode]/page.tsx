@@ -324,7 +324,7 @@ export default function PublicGamePage() {
         <p className="text-sm text-zinc-600">Loading saved progress...</p>
       ) : null}
 
-      <div className="text-center">
+      <div className="mt-6 mb-4 text-center">
         <Link className="text-sm font-medium text-zinc-700 underline hover:text-zinc-900" href={`/g/${accessCode}/close`}>
           Go to close game page
         </Link>

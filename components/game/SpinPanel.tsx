@@ -25,11 +25,13 @@ export function SpinPanel({
   reducedMotion = false,
 }: SpinPanelProps) {
   return (
-    <Card className="text-sm">
-      <h2 className="mb-4 text-lg font-semibold text-zinc-900">Step 3: Spin</h2>
+    <Card className="p-4 text-sm sm:p-5">
+      <h2 className="mb-2 text-base font-semibold uppercase tracking-tight text-zinc-900 sm:text-lg">
+        Step 3: Spin
+      </h2>
       <Wheel isSpinning={isSpinning} outcome={outcome} reducedMotion={reducedMotion} />
       <div className="mt-4">
-        <Button onClick={onSpin} disabled={disabled}>
+        <Button className="w-full sm:w-auto" onClick={onSpin} disabled={disabled}>
           {isSpinning ? "Spinning..." : "Spin"}
         </Button>
       </div>

@@ -35,40 +35,46 @@ export function Quiz({
   const isLastQuestion = questionIndex === totalQuestions - 1;
 
   return (
-    <Card className="text-sm">
-      <h2 className="mb-2 text-lg font-semibold text-zinc-900">Step 2: Quiz</h2>
-      <p className="mb-3 font-medium text-zinc-700">
+    <Card className="p-4 text-sm sm:p-5">
+      <h2 className="mb-2 text-base font-semibold tracking-tight text-zinc-900 sm:text-lg">
+        Step 2: Quiz
+      </h2>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:text-sm">
         Question {questionIndex + 1} / {totalQuestions}
       </p>
-      <p className="mb-3 text-zinc-900">{question.prompt}</p>
-      <div className="flex flex-col gap-2">
-        {question.options.map((option) => (
-          <button
-            key={option.id}
-            className={cn(
-              "w-full rounded-xl border px-4 py-2 text-left text-sm transition",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-800",
-              selectedAnswerId === option.id
-                ? "border-zinc-800 bg-zinc-100"
-                : "border-zinc-200 bg-white hover:bg-zinc-50",
-            )}
-            type="button"
-            onClick={() => setSelectedAnswerId(option.id)}
-            disabled={isSubmitting}
-          >
-            {option.text}
-          </button>
-        ))}
+      <p className="mb-3 text-base font-medium text-zinc-900 sm:text-lg">{question.prompt}</p>
+      <div className="flex flex-col gap-3">
+        {question.options.map((option) => {
+          const isSelected = selectedAnswerId === option.id;
+          return (
+            <button
+              key={option.id}
+              className={cn(
+                "w-full rounded-3xl border px-4 py-3 text-left text-sm font-semibold transition",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-800 focus-visible:ring-offset-2",
+                isSelected
+                  ? "border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/20"
+                  : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-900 hover:text-zinc-900 hover:shadow-sm",
+                isSubmitting ? "cursor-wait opacity-70" : "hover:-translate-y-[1px]",
+              )}
+              type="button"
+              onClick={() => setSelectedAnswerId(option.id)}
+              disabled={isSubmitting}
+            >
+              {option.text}
+            </button>
+          );
+        })}
       </div>
       <Button
-        className="mt-3 w-fit"
+        className="mt-3 w-full sm:w-auto"
         variant="default"
         onClick={() => void onAnswer(selectedAnswerId)}
         disabled={!selectedAnswerId || isSubmitting}
       >
         {isSubmitting ? "Submitting..." : isLastQuestion ? "Submit Answers" : "Next Question"}
       </Button>
-      {feedback ? <p className="mt-3 text-zinc-700">{feedback}</p> : null}
+      {feedback ? <p className="mt-3 text-sm text-zinc-700">{feedback}</p> : null}
     </Card>
   );
 }

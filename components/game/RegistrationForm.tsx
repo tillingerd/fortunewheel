@@ -27,8 +27,10 @@ export function RegistrationForm({
   onChange,
 }: RegistrationFormProps) {
   return (
-    <Card>
-      <h2 className="mb-3 text-lg font-semibold text-zinc-900">Step 1: Registration</h2>
+    <Card className="p-4 sm:p-5">
+      <h2 className="mb-3 text-base font-semibold uppercase tracking-tight text-zinc-900 sm:text-lg">
+        Step 1: Registration
+      </h2>
       <form className="flex flex-col gap-3" onSubmit={onSubmit}>
         <div className="flex flex-col gap-1">
           <Label htmlFor="firstName">First name</Label>
@@ -71,11 +73,10 @@ export function RegistrationForm({
           Accept terms
         </Label>
 
-        <Button className="mt-1 w-fit" type="submit" disabled={isSubmitting}>
+        <Button className="mt-2 w-full sm:w-fit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Start Quiz"}
         </Button>
       </form>
     </Card>
   );
 }
-
