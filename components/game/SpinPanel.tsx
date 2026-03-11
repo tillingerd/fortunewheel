@@ -29,15 +29,15 @@ export function SpinPanel({
       <h2 className="mb-2 text-base font-semibold uppercase tracking-tight text-zinc-900 sm:text-lg">
         Step 3: Spin
       </h2>
-      <div className="mt-2">
+      <div className="mt-2 sm:mt-3">
         <Wheel isSpinning={isSpinning} outcome={outcome} reducedMotion={reducedMotion} />
       </div>
-      <div className="mt-3">
+      <div className="mt-3 sm:mt-4">
         <Button className="w-full sm:w-auto" onClick={onSpin} disabled={disabled}>
           {isSpinning ? "Spinning..." : "Spin"}
         </Button>
       </div>
-      <div className="mt-3">
+      <div className="mt-3 sm:mt-4">
         <ResultCard message={resultMessage} outcome={outcome} />
       </div>
       {note ? <p className="mt-2 text-xs text-zinc-600">{note}</p> : null}

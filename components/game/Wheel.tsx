@@ -137,7 +137,7 @@ export function Wheel({
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[260px] sm:max-w-[320px]">
+    <div className="mx-auto w-full max-w-[240px] sm:max-w-[320px]">
       <div className="relative mx-auto aspect-square w-full">
         <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[35%] drop-shadow-sm">
           <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-zinc-900" />

@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 
 const STEPS = ["registration", "quiz", "spin"] as const;
 
+function getCurrentIndex(step: "registration" | "quiz" | "quizComplete" | "spin") {
+  return step === "registration" ? 0 : step === "spin" ? 2 : 1;
+}
+
 export function StepHeader({
   accessCode,
   step,
@@ -13,8 +17,7 @@ export function StepHeader({
   accessCode: string;
   step: "registration" | "quiz" | "quizComplete" | "spin";
 }) {
-  const currentIndex =
-    step === "registration" ? 0 : step === "spin" ? 2 : 1;
+  const currentIndex = getCurrentIndex(step);
 
   return (
     <header className="rounded-2xl border border-zinc-200 bg-white/90 p-4 shadow-sm shadow-zinc-200/80 sm:p-5">
@@ -41,5 +44,28 @@ export function StepHeader({
         ))}
       </div>
     </header>
+  );
+}
+
+export function MiniStepHeader({
+  accessCode,
+  step,
+}: {
+  accessCode: string;
+  step: "registration" | "quiz" | "quizComplete" | "spin";
+}) {
+  const currentIndex = getCurrentIndex(step);
+  const label = STEPS[currentIndex] ?? "quiz";
+
+  return (
+    <div className="flex items-center justify-between rounded-full border border-zinc-200 bg-white/95 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-600 shadow-sm backdrop-blur">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-900 bg-zinc-900 text-[10px] text-white">
+          {currentIndex + 1}
+        </span>
+        <span className="text-zinc-800">{label}</span>
+      </div>
+      <Badge className="font-mono text-[10px] uppercase tracking-tight">Code: {accessCode}</Badge>
+    </div>
   );
 }

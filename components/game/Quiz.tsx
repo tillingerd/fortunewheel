@@ -33,6 +33,7 @@ export function Quiz({
 }: QuizProps) {
   const [selectedAnswerId, setSelectedAnswerId] = useState<string>("");
   const isLastQuestion = questionIndex === totalQuestions - 1;
+  const progress = totalQuestions > 0 ? ((questionIndex + 1) / totalQuestions) * 100 : 0;
 
   return (
     <Card className="p-4 text-sm sm:p-5">
@@ -42,6 +43,12 @@ export function Quiz({
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:text-sm">
         Question {questionIndex + 1} / {totalQuestions}
       </p>
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+        <div
+          className="h-full rounded-full bg-zinc-900 transition-[width] duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
       <p className="mb-3 text-base font-medium text-zinc-900 sm:text-lg">{question.prompt}</p>
       <div className="flex flex-col gap-3">
         {question.options.map((option) => {
@@ -50,7 +57,8 @@ export function Quiz({
             <button
               key={option.id}
               className={cn(
-                "w-full rounded-3xl border-2 px-4 py-3 text-left text-sm font-semibold transition",
+                "w-full rounded-3xl border-2 px-4 py-3 text-left text-sm font-semibold transition-all",
+                "active:scale-[0.99] motion-reduce:active:scale-100",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2",
                 isSelected
                   ? "border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/25"
