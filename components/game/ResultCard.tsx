@@ -26,7 +26,7 @@ export function ResultCard({ message, outcome = null }: ResultCardProps) {
   }
 
   return (
-    <Card className="border-zinc-300 bg-zinc-50 p-3">
+    <Card className="border-zinc-300 bg-zinc-50 p-3 sm:p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-800">
         {getResultLabel(outcome)}
       </p>

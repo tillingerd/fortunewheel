@@ -29,8 +29,10 @@ export function SpinPanel({
       <h2 className="mb-2 text-base font-semibold uppercase tracking-tight text-zinc-900 sm:text-lg">
         Step 3: Spin
       </h2>
-      <Wheel isSpinning={isSpinning} outcome={outcome} reducedMotion={reducedMotion} />
-      <div className="mt-4">
+      <div className="mt-2">
+        <Wheel isSpinning={isSpinning} outcome={outcome} reducedMotion={reducedMotion} />
+      </div>
+      <div className="mt-3">
         <Button className="w-full sm:w-auto" onClick={onSpin} disabled={disabled}>
           {isSpinning ? "Spinning..." : "Spin"}
         </Button>

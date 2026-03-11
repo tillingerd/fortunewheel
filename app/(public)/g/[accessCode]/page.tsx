@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -74,8 +74,20 @@ export default function PublicGamePage() {
   const [spinNote, setSpinNote] = useState<string>("");
   const [spinOutcome, setSpinOutcome] = useState<"win" | "noWin" | "outOfStock" | null>(null);
   const [confettiKey, setConfettiKey] = useState<string>("");
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   const activeQuestion = useMemo(() => quizQuestions[quizIndex], [quizIndex, quizQuestions]);
+
+  useEffect(() => {
+    if (!contentRef.current) {
+      return;
+    }
+    const behavior = reducedMotion ? "auto" : "smooth";
+    const raf = window.requestAnimationFrame(() => {
+      contentRef.current?.scrollIntoView({ behavior, block: "start" });
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [step, quizIndex, reducedMotion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -269,64 +281,71 @@ export default function PublicGamePage() {
 
       {alertMessage ? <Alert message={alertMessage} tone={alertTone} /> : null}
 
-      {step === "registration" ? (
-        <PanelTransition panelKey="registration">
-          <RegistrationForm
-            form={form}
-            isSubmitting={isRegistering}
-            onSubmit={handleStartQuiz}
-            onChange={setForm}
-          />
-        </PanelTransition>
-      ) : null}
+      <div ref={contentRef} className="flex flex-col gap-4 sm:gap-5">
+        {step === "registration" ? (
+          <PanelTransition panelKey="registration">
+            <RegistrationForm
+              form={form}
+              isSubmitting={isRegistering}
+              onSubmit={handleStartQuiz}
+              onChange={setForm}
+            />
+          </PanelTransition>
+        ) : null}
 
-      {step === "quiz" && activeQuestion ? (
-        <PanelTransition panelKey={activeQuestion.id}>
-          <Quiz
-            key={activeQuestion.id}
-            question={activeQuestion}
-            questionIndex={quizIndex}
-            totalQuestions={quizQuestions.length}
-            feedback={quizFeedback}
-            isSubmitting={isQuizSubmitting}
-            onAnswer={handleAnswer}
-          />
-        </PanelTransition>
-      ) : null}
+        {step === "quiz" && activeQuestion ? (
+          <PanelTransition panelKey={activeQuestion.id}>
+            <Quiz
+              key={activeQuestion.id}
+              question={activeQuestion}
+              questionIndex={quizIndex}
+              totalQuestions={quizQuestions.length}
+              feedback={quizFeedback}
+              isSubmitting={isQuizSubmitting}
+              onAnswer={handleAnswer}
+            />
+          </PanelTransition>
+        ) : null}
 
-      {step === "quizComplete" ? (
-        <PanelTransition panelKey="quizComplete">
-          <Card>
-            <h2 className="mb-2 text-lg font-semibold text-zinc-900">Step 2: Quiz</h2>
-            <p className="text-sm text-zinc-700">Congratulations, your answers are correct!</p>
-            <Button className="mt-4" onClick={() => setStep("spin")}>
-              Let&apos;s spin the wheel!
-            </Button>
-          </Card>
-        </PanelTransition>
-      ) : null}
+        {step === "quizComplete" ? (
+          <PanelTransition panelKey="quizComplete">
+            <Card className="p-4 sm:p-5">
+              <h2 className="mb-2 text-base font-semibold tracking-tight text-zinc-900 sm:text-lg">
+                Step 2: Quiz
+              </h2>
+              <p className="text-sm text-zinc-700">Congratulations, your answers are correct!</p>
+              <Button className="mt-4 w-full sm:w-fit" onClick={() => setStep("spin")}>
+                Let&apos;s spin the wheel!
+              </Button>
+            </Card>
+          </PanelTransition>
+        ) : null}
 
-      {step === "spin" ? (
-        <PanelTransition panelKey="spin">
-          <SpinPanel
-            resultMessage={spinResult}
-            onSpin={handleSpin}
-            disabled={isSpinning || hasSpun || !quizPassed}
-            isSpinning={isSpinning}
-            note={spinNote}
-            outcome={spinOutcome}
-            reducedMotion={reducedMotion}
-          />
-        </PanelTransition>
-      ) : null}
+        {step === "spin" ? (
+          <PanelTransition panelKey="spin">
+            <SpinPanel
+              resultMessage={spinResult}
+              onSpin={handleSpin}
+              disabled={isSpinning || hasSpun || !quizPassed}
+              isSpinning={isSpinning}
+              note={spinNote}
+              outcome={spinOutcome}
+              reducedMotion={reducedMotion}
+            />
+          </PanelTransition>
+        ) : null}
+      </div>
 
       {isResuming ? (
         <p className="text-sm text-zinc-600">Loading saved progress...</p>
       ) : null}
 
-      <div className="mt-6 mb-4 text-center">
-        <Link className="text-sm font-medium text-zinc-700 underline hover:text-zinc-900" href={`/g/${accessCode}/close`}>
-          Go to close game page
+      <div className="mt-8 flex justify-center">
+        <Link
+          className="inline-flex w-full items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-50 sm:w-auto"
+          href={`/g/${accessCode}/close`}
+        >
+          Close game
         </Link>
       </div>
     </PublicShell>

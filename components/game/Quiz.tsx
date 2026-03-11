@@ -50,18 +50,25 @@ export function Quiz({
             <button
               key={option.id}
               className={cn(
-                "w-full rounded-3xl border px-4 py-3 text-left text-sm font-semibold transition",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-800 focus-visible:ring-offset-2",
+                "w-full rounded-3xl border-2 px-4 py-3 text-left text-sm font-semibold transition",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2",
                 isSelected
-                  ? "border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/20"
-                  : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-900 hover:text-zinc-900 hover:shadow-sm",
+                  ? "border-zinc-900 bg-zinc-900 text-white shadow-lg shadow-zinc-900/25"
+                  : "border-zinc-300 bg-white text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 hover:shadow-sm",
                 isSubmitting ? "cursor-wait opacity-70" : "hover:-translate-y-[1px]",
               )}
               type="button"
               onClick={() => setSelectedAnswerId(option.id)}
               disabled={isSubmitting}
             >
-              {option.text}
+              <span className="flex items-center justify-between gap-3">
+                <span>{option.text}</span>
+                {isSelected ? (
+                  <span className="inline-flex h-6 min-w-[48px] items-center justify-center rounded-full border border-white/40 bg-white/10 text-[11px] font-semibold uppercase tracking-wide text-white">
+                    Selected
+                  </span>
+                ) : null}
+              </span>
             </button>
           );
         })}
